@@ -1,0 +1,28 @@
+# 1. Environnement Virtuel 
+env/
+venv/
+ENV/
+.venv/
+
+# 2. Fichiers Python compilés et cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 3. Base de données locale (SQLite)
+*.sqlite3
+*.db
+
+# 4. Fichiers Statiques collectés / Média (images téléchargées par les utilisateurs)
+/staticfiles/
+/media/
+
+# 5. Configuration VS Code & Système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 6. Variables d'environnement et secrets 
+.env
+local_settings.py

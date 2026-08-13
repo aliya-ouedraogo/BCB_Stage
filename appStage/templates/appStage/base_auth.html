@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BCBStageFlow{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{% static 'appStage/css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'appStage/css/base.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  {% block content %}{% endblock %}
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

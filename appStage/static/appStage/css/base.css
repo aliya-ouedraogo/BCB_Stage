@@ -1,0 +1,126 @@
+/* =========================================================
+   BCBStageFlow — Base / reset / utilitaires communs
+   ========================================================= */
+
+*, *::before, *::after { 
+  box-sizing: border-box; 
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img { max-width: 100%; display: block; }
+
+a { color: inherit; text-decoration: none; }
+
+button, input, select, textarea { font-family: inherit; }
+
+h1, h2, h3, h4, p { margin: 0; }
+
+ul { list-style: none; margin: 0; padding: 0; }
+
+/* Focus clavier visible partout (accessibilité) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- Boutons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-block { width: 100%; }
+
+.btn-primary {
+  background: var(--color-ink);
+  color: #fff;
+}
+.btn-primary:hover { background: #000; }
+
+.btn-secondary {
+  background: #f0f0f2;
+  color: var(--color-text);
+}
+.btn-secondary:hover { background: #e5e5e9; }
+
+.btn-outline {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.btn-outline:hover { border-color: #cfd0d5; background: #fafafa; }
+
+.btn-sm { height: 38px; padding: 0 14px; font-size: 14px; border-radius: var(--radius-sm); }
+
+/* --- Badges --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge-success { background: var(--color-success-bg); color: var(--color-success); }
+.badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-danger  { background: var(--color-danger-bg); color: var(--color-danger); }
+.badge-info    { background: var(--color-info-bg); color: var(--color-info); }
+.badge-neutral { background: #eef0f2; color: var(--color-text-muted); }
+
+/* --- Cartes --- */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Icônes lucide : taille par défaut --- */
+[data-lucide] {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2px;
+}
+
+/* --- Utilitaires --- */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
