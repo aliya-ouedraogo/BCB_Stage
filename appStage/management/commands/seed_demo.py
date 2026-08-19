@@ -1,5 +1,4 @@
 import datetime
-import random
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -55,8 +54,8 @@ class Command(BaseCommand):
 
         # --- Maître de stage ---
         tuteur_user = User.objects.create_user(
-            username='dr.lemaire', email='lemaire@bcbstageflow.test', password='DemoPass123',
-            first_name='', last_name='Dr. Lemaire', role=User.Role.MAITRE_STAGE,
+            username='M.Kader', email='kader@bcbstageflow.test', password='DemoPass123',
+            first_name='', last_name='M. Kader', role=User.Role.MAITRE_STAGE,
         )
         profil_tuteur = ProfilMaitreStage.objects.create(
             user=tuteur_user, poste="Lead Developer", departement_affiliation="Développement Web"
@@ -70,101 +69,101 @@ class Command(BaseCommand):
             )
             return ProfilStagiaire.objects.create(user=u, filiere=filiere, annee_etude=annee)
 
-        profil_thomas = creer_stagiaire('thomasd', 'Thomas', 'Dubois', 'Développement Web', '3ème Année')
-        profil_sophie = creer_stagiaire('sophiem', 'Sophie', 'Martin', 'Marketing Digital', '2ème Année')
-        profil_lucas = creer_stagiaire('lucasb', 'Lucas', 'Bernard', 'Ressources Humaines', '1ère Année')
-        profil_emma = creer_stagiaire('emmap', 'Emma', 'Petit', 'Design Graphique', 'Terminée')
+        profil_mariam = creer_stagiaire('mariam', 'Mariam', 'Oued', 'Développement Web', '1ère Année')
+        profil_succes = creer_stagiaire('succes', 'Succes', 'Da', 'Reseau et Telecom', '3ème Année')
+        profil_aliya = creer_stagiaire('aliya', 'Aliya', 'Oued', 'Développement Web', '2ème Année')
+        profil_geoffroy = creer_stagiaire('geoffroy', 'Geoffroy', 'Yam', 'Reseau et Telecom', 'Terminée')
 
         aujourdhui = timezone.now().date()
 
-        # --- Stage principal (Thomas) : en cours, avec tuteur, semaine 4/12 ---
-        stage_thomas = Stage.objects.create(
-            stagiaire=profil_thomas, departement=dep_dev, maitre_de_stage=profil_tuteur,
+        # --- Stage principal (Mariam) : en cours, avec tuteur, semaine 4/12 ---
+        stage_mariam = Stage.objects.create(
+            stagiaire=profil_mariam, departement=dep_dev, maitre_de_stage=profil_tuteur,
             intitule_poste="Stagiaire Ingénieur Logiciel",
             date_debut=aujourdhui - datetime.timedelta(weeks=4),
             date_fin=aujourdhui + datetime.timedelta(weeks=8),
             statut=Stage.Statut.EN_COURS, avec_soutenance=True,
         )
         Mission.objects.create(
-            stage=stage_thomas, titre="Intégration API — Phase 2", equipe="Équipe Backend",
+            stage=stage_mariam, titre="Intégration API — Phase 2", equipe="Équipe Backend",
             description="Finaliser la migration des anciens points de terminaison vers GraphQL.",
             echeance=aujourdhui + datetime.timedelta(days=3), statut=Mission.Statut.EN_COURS,
         )
         RapportHebdomadaire.objects.create(
-            stage=stage_thomas, numero_semaine=1, statut=RapportHebdomadaire.Statut.VALIDE,
+            stage=stage_mariam, numero_semaine=1, statut=RapportHebdomadaire.Statut.VALIDE,
         )
         DocumentStage.objects.create(
-            stage=stage_thomas, nom="Convention_Stage_Signee.pdf", type_document=DocumentStage.TypeDocument.CONVENTION,
+            stage=stage_mariam, nom="Convention_Stage_Signee.pdf", type_document=DocumentStage.TypeDocument.CONVENTION,
             statut_signature=DocumentStage.StatutSignature.SIGNE, date_signature=aujourdhui - datetime.timedelta(weeks=4),
         )
         DocumentStage.objects.create(
-            stage=stage_thomas, nom="Rapport_Hebdo_S3.docx", type_document=DocumentStage.TypeDocument.RAPPORT,
+            stage=stage_mariam, nom="Rapport_Hebdo_S3.docx", type_document=DocumentStage.TypeDocument.RAPPORT,
         )
         Evaluation.objects.create(
-            stage=stage_thomas, type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS,
+            stage=stage_mariam, type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS,
             note=17.5,
-            commentaire="Thomas a fait preuve d'une excellente initiative sur les dernières tâches liées à l'API. "
+            commentaire="Mariam a fait preuve d'une excellente initiative sur les dernières tâches liées à l'API. "
                         "La qualité du code est constamment élevée. Point d'attention : améliorer la documentation.",
         )
         for i in range(20):
             jour = aujourdhui - datetime.timedelta(days=i)
             Presence.objects.create(
-                stage=stage_thomas, date=jour,
+                stage=stage_mariam, date=jour,
                 present=(i != 5), justifie=(i == 5), valide_par_tuteur=(i > 1),
             )
 
-        # --- Stage Sophie : en cours, tuteur assigné, progression 75% ---
-        stage_sophie = Stage.objects.create(
-            stagiaire=profil_sophie, departement=dep_marketing, maitre_de_stage=profil_tuteur,
+        # --- Stage Succes : en cours, tuteur assigné, progression avancée ---
+        stage_succes = Stage.objects.create(
+            stagiaire=profil_succes, departement=dep_marketing, maitre_de_stage=profil_tuteur,
             intitule_poste="Stagiaire Marketing Digital",
             date_debut=aujourdhui - datetime.timedelta(weeks=9),
             date_fin=aujourdhui + datetime.timedelta(weeks=3),
             statut=Stage.Statut.EN_COURS, avec_soutenance=True,
         )
         RapportHebdomadaire.objects.create(
-            stage=stage_sophie, numero_semaine=9, statut=RapportHebdomadaire.Statut.EN_ATTENTE,
+            stage=stage_succes, numero_semaine=9, statut=RapportHebdomadaire.Statut.EN_ATTENTE,
             date_soumission=timezone.now() - datetime.timedelta(hours=2),
         )
 
-        # --- Stage Lucas : en cours, tuteur assigné, en révision ---
-        stage_lucas = Stage.objects.create(
-            stagiaire=profil_lucas, departement=dep_rh, maitre_de_stage=profil_tuteur,
+        # --- Stage Aliya : en cours, tuteur assigné, en révision ---
+        stage_aliya = Stage.objects.create(
+            stagiaire=profil_aliya, departement=dep_rh, maitre_de_stage=profil_tuteur,
             intitule_poste="Stagiaire Ressources Humaines",
             date_debut=aujourdhui - datetime.timedelta(weeks=5),
             date_fin=aujourdhui + datetime.timedelta(weeks=7),
             statut=Stage.Statut.EN_COURS, avec_soutenance=True,
         )
         RapportHebdomadaire.objects.create(
-            stage=stage_lucas, numero_semaine=5, statut=RapportHebdomadaire.Statut.EN_ATTENTE,
+            stage=stage_aliya, numero_semaine=5, statut=RapportHebdomadaire.Statut.EN_ATTENTE,
             date_soumission=timezone.now() - datetime.timedelta(days=1),
         )
 
-        # --- Stage Emma : terminé, objectifs en retard, sans tuteur assigné ---
-        stage_emma = Stage.objects.create(
-            stagiaire=profil_emma, departement=dep_marketing,
+        # --- Stage Geoffroy : terminé, objectifs en retard, sans tuteur assigné ---
+        stage_geoffroy = Stage.objects.create(
+            stagiaire=profil_geoffroy, departement=dep_marketing,
             intitule_poste="Stagiaire Design Graphique",
             date_debut=aujourdhui - datetime.timedelta(weeks=26),
             date_fin=aujourdhui - datetime.timedelta(weeks=2),
             statut=Stage.Statut.TERMINE, avec_soutenance=False,
         )
         RapportHebdomadaire.objects.create(
-            stage=stage_emma, numero_semaine=1, statut=RapportHebdomadaire.Statut.EN_RETARD,
+            stage=stage_geoffroy, numero_semaine=1, statut=RapportHebdomadaire.Statut.EN_RETARD,
             date_soumission=timezone.now() - datetime.timedelta(days=2),
         )
 
-        # --- Convention non signée (Lucas), pour le panneau "À faire" du RH ---
+        # --- Convention non signée (Aliya), pour le panneau "À faire" du RH ---
         DocumentStage.objects.create(
-            stage=stage_lucas, nom="Convention_Lucas_Bernard.pdf",
+            stage=stage_aliya, nom="Convention_Aliya_Oued.pdf",
             type_document=DocumentStage.TypeDocument.CONVENTION,
             statut_signature=DocumentStage.StatutSignature.EN_ATTENTE,
         )
 
-        # --- Demande d'encadrement en attente (Emma vers Dr. Lemaire) ---
-        DemandeEncadrement.objects.create(stage=stage_emma, maitre_de_stage_demande=profil_tuteur)
+        # --- Demande d'encadrement en attente (Geoffroy vers M. Kader) ---
+        DemandeEncadrement.objects.create(stage=stage_geoffroy, maitre_de_stage_demande=profil_tuteur)
 
         # --- Entretien RH consigné ---
         Entretien.objects.create(
-            stage=stage_thomas, rh=profil_rh,
+            stage=stage_mariam, rh=profil_rh,
             date=timezone.now() - datetime.timedelta(days=10),
             compte_rendu="Point d'intégration à un mois : bonne adaptation à l'équipe, aucun blocage signalé.",
         )
@@ -187,7 +186,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             "\nDonnées de démo créées. Comptes de connexion (mot de passe : DemoPass123) :\n"
             "  - RH        : adminhr\n"
-            "  - Tuteur    : dr.lemaire\n"
-            "  - Stagiaire : thomasd (dashboard complet, en cours)\n"
-            "  - Stagiaire : sophiem / lucasb / emmap (variantes de statut)\n"
+            "  - Tuteur    : M.Kader\n"
+            "  - Stagiaire : mariam (dashboard complet, en cours)\n"
+            "  - Stagiaire : succes / aliya / geoffroy (variantes de statut)\n"
         ))
