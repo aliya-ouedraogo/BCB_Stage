@@ -1,0 +1,83 @@
+{% extends "appStage/base_auth.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appStage/css/dashboard.css' %}">
+  {% block page_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-body">
+
+  <!-- ============== Sidebar ============== -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">
+        <span class="brand-icon">B</span>
+        <div class="brand-text">
+          <span class="brand-name">BCBStageFlow</span>
+          <span class="brand-sub">Management Portal</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        {% block nav %}{% endblock %}
+      </nav>
+    </div>
+
+    <div class="sidebar-bottom">
+      {% block sidebar_cta %}{% endblock %}
+      <div class="sidebar-divider"></div>
+      <a href="#" class="sidebar-footer-link">
+        <i data-lucide="user-cog"></i> Paramètres du compte
+      </a>
+      <a href="{% url 'appStage:onboarding' %}" class="sidebar-footer-link">
+        <i data-lucide="log-out"></i> Déconnexion
+      </a>
+    </div>
+  </aside>
+
+  <!-- ============== Zone principale ============== -->
+  <div class="dashboard-main">
+    <header class="topbar">
+      <div class="topbar-heading">
+        {% block page_eyebrow %}{% endblock %}
+        <h1>{% block page_title %}{% endblock %}</h1>
+        {% block page_subtitle %}{% endblock %}
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Rechercher">
+          <i data-lucide="search"></i>
+        </button>
+        <button class="icon-btn" aria-label="Notifications">
+          <i data-lucide="bell"></i>
+          {% block notif_dot %}<span class="notif-dot"></span>{% endblock %}
+        </button>
+        <div class="topbar-user">
+          <span class="user-avatar">
+            {% block user_avatar %}<i data-lucide="user"></i>{% endblock %}
+          </span>
+          <span class="user-name">{% block user_name %}Utilisateur{% endblock %}</span>
+          <i data-lucide="chevron-down"></i>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      {% block dashboard_content %}{% endblock %}
+    </main>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    document.querySelectorAll('[data-progression]').forEach(function (el) {
+      var bar = el.querySelector('span');
+      if (bar) bar.style.width = el.dataset.progression + '%';
+    });
+  </script>
+  {% block page_js %}{% endblock %}
+{% endblock %}

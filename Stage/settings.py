@@ -10,7 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +29,7 @@ SECRET_KEY = 'django-insecure-ci-lkozz^fg-sns=8dj!27@)it&+=)jl$w)os5q*5$+ycxtizo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -51,6 +55,13 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'Stage.urls'
+
+# Modèle d'utilisateur custom (rôles stagiaire / RH / maître de stage)
+AUTH_USER_MODEL = 'appStage.User'
+
+LOGIN_URL = 'appStage:login'
+LOGIN_REDIRECT_URL = 'appStage:onboarding'  # secours ; ConnexionView redirige déjà selon le rôle
+LOGOUT_REDIRECT_URL = 'appStage:onboarding'
 
 TEMPLATES = [
     {
@@ -80,6 +91,21 @@ DATABASES = {
     }
 }
 
+# --- Bascule automatique vers MySQL si configuré (ex: .env avec MYSQL_DATABASE) ---
+# Ainsi, chaque personne de l'équipe peut lancer le projet sans rien installer
+# de plus : tant qu'elle n'a pas de MySQL configuré, SQLite prend le relais
+# automatiquement, sans erreur ni modification de settings.py à faire.
+if os.environ.get('MYSQL_DATABASE'):
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('MYSQL_DATABASE'),
+        'USER': os.environ.get('MYSQL_USER'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
+        'HOST': os.environ.get('MYSQL_HOST', 'localhost'),
+        'PORT': os.environ.get('MYSQL_PORT', '3306'),
+        'OPTIONS': {'charset': 'utf8mb4'},
+    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -103,9 +129,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr-fr'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Ouagadougou'
 
 USE_I18N = True
 
@@ -115,10 +141,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-import os
-
 STATIC_URL = 'static/'
+# Pas besoin de STATICFILES_DIRS : 'appStage' est dans INSTALLED_APPS,
+# Django trouve automatiquement appStage/static/ via AppDirectoriesFinder.
 
+# Fichiers uploadés par les utilisateurs (avatars, CV, conventions, rapports...)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Email

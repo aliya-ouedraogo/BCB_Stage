@@ -1,0 +1,212 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Mon Espace Stagiaire — BCBStageFlow{% endblock %}
+
+{% block nav %}
+  <a href="{% url 'appStage:dashboard_stagiaire' %}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+  <a href="#" class="nav-item"><i data-lucide="users"></i> Interns</a>
+  <a href="#" class="nav-item"><i data-lucide="file-text"></i> Documents</a>
+  <a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a>
+{% endblock %}
+
+{% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;! 👋{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Voici un aperçu de la progression de votre stage.</span>{% endblock %}
+
+{% block user_avatar %}
+  {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+  {% else %}<i data-lucide="user"></i>{% endif %}
+{% endblock %}
+{% block user_name %}{{ user.first_name|default:user.username }}{% endblock %}
+
+{% block dashboard_content %}
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="badge badge-success" style="width:fit-content;">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  {% if not stage %}
+    <div class="panel" style="text-align:center; padding:48px 24px;">
+      <i data-lucide="inbox" style="width:32px;height:32px;color:var(--color-text-faint);"></i>
+      <h2 style="margin-top:14px;">Aucun stage en cours</h2>
+      <p style="color:var(--color-text-muted); font-size:14px; margin-top:6px;">
+        Vous n'avez pas encore de stage actif. Dès qu'une candidature est acceptée par le RH,
+        votre tableau de bord affichera automatiquement votre progression.
+      </p>
+    </div>
+  {% else %}
+
+  <!-- Ligne 1 : progression du stage + présence -->
+  <div class="dash-grid">
+    <div class="dash-col">
+      <div class="panel">
+        <div class="progress-hero">
+          <div>
+            <h2>Progression du Stage</h2>
+            <span class="subtitle">{{ stage.intitule_poste }} &bull; {{ stage.departement.nom }}</span>
+          </div>
+          {% if stage.progression_pourcentage >= 50 %}
+            <span class="badge badge-success"><i data-lucide="trending-up" style="width:12px;height:12px;"></i> En Bonne Voie</span>
+          {% else %}
+            <span class="badge badge-info">Démarrage</span>
+          {% endif %}
+        </div>
+
+        <div class="progress-metrics">
+          <div>
+            <div class="metric-value">{{ stage.progression_pourcentage }}%</div>
+            <div class="metric-label">Complété</div>
+          </div>
+          <div>
+            <div class="metric-value">{{ stage.semaines_restantes }}</div>
+            <div class="metric-label">Semaines Restantes</div>
+          </div>
+          <div>
+            <div class="metric-value">{{ stage.missions.count }}</div>
+            <div class="metric-label">Missions</div>
+          </div>
+        </div>
+
+        <div class="week-row">
+          <span>Semaine {{ stage.semaines_ecoulees }} sur {{ stage.duree_totale_semaines }}</span>
+          {% if not stage.maitre_de_stage %}
+            <a href="#">Choisir un maître de stage</a>
+          {% endif %}
+        </div>
+        <div class="progress-bar" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
+      </div>
+    </div>
+
+    <div class="dash-col">
+      <div class="panel panel--dark">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <h3 style="font-size:16px;">Présence</h3>
+          <i data-lucide="calendar" style="width:18px;height:18px;color:#b7b8c4;"></i>
+        </div>
+
+        <div class="attendance-value">{{ taux_presence|default:"—" }}<span>%</span></div>
+
+        <div class="attendance-stat">
+          <span>Jours Présents</span>
+          <strong>{{ nb_jours_presents }}/{{ nb_presences_totales }}</strong>
+        </div>
+        <div class="attendance-stat">
+          <span>Absences</span>
+          <strong>{{ nb_absences }} ({{ nb_absences_justifiees }} excusée{{ nb_absences_justifiees|pluralize }})</strong>
+        </div>
+
+        <form method="post" action="{% url 'appStage:pointer_presence' %}">
+          {% csrf_token %}
+          {% if deja_pointe_aujourdhui %}
+            <button class="btn btn-outline btn-block" style="margin-top:18px;" disabled>
+              <i data-lucide="check"></i> Présence déjà enregistrée
+            </button>
+          {% else %}
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top:18px;">
+              <i data-lucide="log-in"></i> Pointer aujourd'hui
+            </button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ligne 2 : mission en cours / documents récents / retour du tuteur -->
+  <div class="mini-grid">
+
+    <div class="panel">
+      <div class="panel-title-row">
+        <h2 class="panel-title" style="margin-bottom:0;">Mission en Cours</h2>
+        <i data-lucide="more-horizontal" style="width:18px;height:18px;color:var(--color-text-faint);"></i>
+      </div>
+
+      {% if mission_actuelle %}
+        <div class="mission-box">
+          <span class="mission-icon"><i data-lucide="git-branch"></i></span>
+          <div>
+            <div class="mission-title">{{ mission_actuelle.titre }}</div>
+            <div class="mission-team">{{ mission_actuelle.equipe }}</div>
+          </div>
+        </div>
+
+        <p class="mission-desc">{{ mission_actuelle.description }}</p>
+
+        <div class="mission-meta">
+          <span></span>
+          {% if mission_actuelle.echeance %}
+            <span class="chip">Échéance le {{ mission_actuelle.echeance|date:"d M" }}</span>
+          {% endif %}
+        </div>
+
+        <button class="btn btn-primary btn-block">Mettre à jour le statut</button>
+      {% else %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucune mission assignée pour le moment.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-title-row">
+        <h2 class="panel-title" style="margin-bottom:0;">Documents Récents</h2>
+        <a href="#" class="link-arrow" style="font-size:13px;">Voir tout</a>
+      </div>
+
+      {% for doc in documents_recents %}
+        <div class="doc-row">
+          {% if doc.type_document == 'CONVENTION' or doc.type_document == 'CONTRAT' %}
+            <span class="doc-icon doc-icon--pdf"><i data-lucide="file-text"></i></span>
+          {% elif doc.type_document == 'RAPPORT' %}
+            <span class="doc-icon doc-icon--doc"><i data-lucide="file"></i></span>
+          {% else %}
+            <span class="doc-icon doc-icon--folder"><i data-lucide="folder"></i></span>
+          {% endif %}
+          <div class="doc-info">
+            <div class="doc-name">{{ doc.nom }}</div>
+            <div class="doc-meta">
+              {{ doc.get_type_document_display }} &bull; Ajouté {{ doc.date_ajout|timesince }}
+              {% if doc.statut_signature == 'SIGNE' %} &bull; Signé{% elif doc.statut_signature == 'EN_ATTENTE' %} &bull; En attente de signature{% endif %}
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucun document pour le moment.</p>
+      {% endfor %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-title-row">
+        <h2 class="panel-title" style="margin-bottom:0;">Retour du Maître de Stage</h2>
+        {% if etoiles_pleines %}
+          <div class="star-row">
+            {% for i in "12345" %}
+              <i data-lucide="star" {% if forloop.counter > etoiles_pleines %}class="star-off"{% endif %}></i>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if derniere_evaluation %}
+        <p class="feedback-quote">« {{ derniere_evaluation.commentaire }} »</p>
+
+        <div class="feedback-author">
+          {% if stage.maitre_de_stage.user.photo %}
+            <img class="avatar" src="{{ stage.maitre_de_stage.user.photo.url }}" alt="" style="width:32px;height:32px;">
+          {% else %}
+            <span class="avatar" style="width:32px;height:32px;">{{ stage.maitre_de_stage.user.first_name|first }}</span>
+          {% endif %}
+          <div class="person-info">
+            <span class="person-name">{{ stage.maitre_de_stage.user.get_full_name|default:"Maître de stage" }}</span>
+            <span class="person-role">{{ stage.maitre_de_stage.poste }}</span>
+          </div>
+        </div>
+        <div class="feedback-date">{{ derniere_evaluation.date_evaluation|date:"d M Y" }}</div>
+      {% else %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Pas encore d'évaluation.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {% endif %}
+
+{% endblock %}

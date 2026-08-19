@@ -1,0 +1,141 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Vue d'Ensemble — RH — BCBStageFlow{% endblock %}
+
+{% block nav %}
+  <a href="{% url 'appStage:dashboard_rh' %}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+  <a href="#" class="nav-item"><i data-lucide="users"></i> Interns</a>
+  <a href="#" class="nav-item"><i data-lucide="file-text"></i> Documents</a>
+  <a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a>
+{% endblock %}
+
+{% block page_title %}Vue d'Ensemble{% endblock %}
+
+{% block user_avatar %}
+  {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+  {% else %}<i data-lucide="shield"></i>{% endif %}
+{% endblock %}
+{% block user_name %}{{ user.get_full_name|default:user.username }}{% endblock %}
+
+{% block dashboard_content %}
+
+  <!-- Cartes statistiques -->
+  <div class="stat-grid">
+    <div class="stat-card stat-card--dark">
+      <span class="stat-icon"><i data-lucide="users"></i></span>
+      <span class="stat-label">Stagiaires Actifs</span>
+      <div class="stat-value">{{ nb_stagiaires_actifs }}</div>
+      <div class="stat-trend">
+        <i data-lucide="trending-up"></i>
+        {% if nouveaux_stagiaires_ce_mois %}+{{ nouveaux_stagiaires_ce_mois }} ce mois-ci{% else %}Aucun nouveau ce mois-ci{% endif %}
+      </div>
+    </div>
+
+    <div class="stat-card stat-card--mint">
+      <span class="stat-icon"><i data-lucide="file-text"></i></span>
+      <span class="stat-label">Candidatures</span>
+      <div class="stat-value">{{ nb_candidatures_en_attente }}</div>
+      <div class="stat-trend"><i data-lucide="trending-up"></i> +{{ nouvelles_candidatures_semaine }} cette semaine</div>
+    </div>
+
+    <div class="stat-card stat-card--lavender">
+      <span class="stat-icon"><i data-lucide="shield-check"></i></span>
+      <span class="stat-label">Conventions</span>
+      <div class="stat-value">{{ nb_conventions_signees }}</div>
+      <div class="stat-trend"><i data-lucide="briefcase"></i> {{ nb_conventions_en_attente }} en attente</div>
+    </div>
+
+    <div class="stat-card stat-card--peach">
+      <span class="stat-icon"><i data-lucide="calendar-clock"></i></span>
+      <span class="stat-label">Fins de Stage</span>
+      <div class="stat-value">{{ nb_fins_de_stage_ce_mois }}</div>
+      <div class="stat-trend"><i data-lucide="alert-triangle"></i> Ce mois-ci</div>
+    </div>
+  </div>
+
+  <!-- Colonnes : liste stagiaires + panneau latéral -->
+  <div class="dash-grid"> 
+    <div class="dash-col">
+      <div class="panel">
+        <div class="panel-title-row">
+          <h2 class="panel-title" style="margin-bottom:0;">Stagiaires Récents</h2>
+          <div class="tab-group">
+            <button class="tab-item active">Tous</button>
+            <button class="tab-item">Actifs</button>
+            <button class="tab-item">Terminés</button>
+          </div>
+        </div>
+
+        {% for stage in stagiaires_recents %}
+          <div class="person-row">
+            {% if stage.stagiaire.user.photo %}
+              <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
+            {% else %}
+              <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
+            {% endif %}
+            <div class="person-info">
+              <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
+              <span class="person-role">{{ stage.departement.nom }}</span>
+            </div>
+            <span class="person-dates">{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</span>
+            {% if stage.statut == 'EN_COURS' %}
+              <span class="badge badge-success">En cours</span>
+            {% elif stage.statut == 'TERMINE' %}
+              <span class="badge badge-neutral">Terminé</span>
+            {% elif stage.statut == 'A_VENIR' %}
+              <span class="badge badge-info">À venir</span>
+            {% else %}
+              <span class="badge badge-warning">Résilié</span>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p style="color:var(--color-text-muted); font-size:14px; padding:20px 0;">
+            Aucun stagiaire enregistré pour le moment.
+          </p>
+        {% endfor %}
+
+        <button class="list-cta">Voir tous les stagiaires</button>
+      </div>
+    </div>
+
+    <div class="dash-col">
+      <div class="panel panel--dark">
+        <span class="announce-icon"><i data-lucide="megaphone"></i></span>
+        <h3>Campagne Été 2024</h3>
+        <p>Il est temps de lancer les recrutements pour les stages d'été. Préparez vos offres.</p>
+        <button class="btn btn-primary">Créer une offre</button>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">À faire</h2>
+        <div class="todo-list">
+
+          {% for doc in conventions_en_attente %}
+            <div class="todo-item">
+              <span class="todo-icon todo-icon--danger"><i data-lucide="alert-triangle"></i></span>
+              <div class="todo-content">
+                <div class="todo-title">Convention non signée</div>
+                <div class="todo-desc">{{ doc.stage.stagiaire.user.get_full_name }} — {{ doc.stage.departement.nom }}</div>
+              </div>
+            </div>
+          {% endfor %}
+
+          {% for stage in stages_sans_eval %}
+            <div class="todo-item">
+              <span class="todo-icon todo-icon--info"><i data-lucide="clipboard-check"></i></span>
+              <div class="todo-content">
+                <div class="todo-title">Évaluation mi-parcours manquante</div>
+                <div class="todo-desc">{{ stage.stagiaire.user.get_full_name }} — semaine {{ stage.semaines_ecoulees }}/{{ stage.duree_totale_semaines }}</div>
+              </div>
+            </div>
+          {% endfor %}
+
+          {% if not conventions_en_attente and not stages_sans_eval %}
+            <p style="color:var(--color-text-muted); font-size:14px;">Rien en attente pour le moment 🎉</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

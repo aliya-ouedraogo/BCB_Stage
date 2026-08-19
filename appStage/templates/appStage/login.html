@@ -1,0 +1,64 @@
+{% extends "appStage/base_auth.html" %}
+{% load static %}
+
+{% block title %}Se connecter — BCBStageFlow{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appStage/css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <div class="auth-card">
+
+    <section class="auth-showcase" aria-hidden="true">
+      <div class="auth-brand">
+        <span class="brand-mark"><i data-lucide="layout-grid"></i></span>
+        BCBStageFlow
+      </div>
+      <div class="auth-visual"></div>
+      <div class="auth-copy">
+        <h2>Content de vous revoir.</h2>
+        <p>Connectez-vous pour retrouver votre tableau de bord et suivre l'avancement de vos stages.</p>
+      </div>
+    </section>
+
+    <section class="auth-form-panel">
+      <h1>Se connecter</h1>
+      <p class="auth-subtitle">Entrez vos identifiants pour accéder à votre espace.</p>
+
+      {% if form.non_field_errors %}
+        <div class="form-errors">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" class="auth-fields">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+          {{ form.username }}
+          {% for error in form.username.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.password.id_for_label }}">Mot de passe</label>
+          {{ form.password }}
+          {% for error in form.password.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+          Se connecter
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Pas encore de compte ? <a href="{% url 'appStage:register' %}">Créer un compte</a>
+      </p>
+    </section>
+
+  </div>
+</main>
+{% endblock %}

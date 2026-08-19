@@ -1,0 +1,141 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Espace Maître de Stage — BCBStageFlow{% endblock %}
+
+{% block nav %}
+  <a href="{% url 'appStage:dashboard_tuteur' %}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+  <a href="#" class="nav-item"><i data-lucide="users"></i> Interns</a>
+  <a href="#" class="nav-item"><i data-lucide="file-text"></i> Documents</a>
+  <a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a>
+{% endblock %}
+
+{% block page_eyebrow %}<span class="eyebrow">Espace Maître de Stage</span>{% endblock %}
+{% block page_title %}Bonjour, {{ user.get_full_name|default:user.username }}{% endblock %}
+
+{% block user_avatar %}
+  {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+  {% else %}<i data-lucide="user"></i>{% endif %}
+{% endblock %}
+{% block user_name %}{{ user.get_full_name|default:user.username }}{% endblock %}
+
+{% block dashboard_content %}
+
+  <div class="dash-grid">
+    <div class="dash-col">
+
+      <div class="section-head">
+        <h2>Stagiaires Actifs</h2>
+        <a href="#" class="link-arrow">Voir tout <i data-lucide="arrow-right"></i></a>
+      </div>
+
+      {% if stages_encadres %}
+        <div class="intern-grid">
+          {% for stage in stages_encadres %}
+            <div class="intern-card">
+              <div class="intern-card-head">
+                <div class="intern-identity">
+                  {% if stage.stagiaire.user.photo %}
+                    <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
+                  {% else %}
+                    <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
+                  {% endif %}
+                  <div class="person-info">
+                    <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
+                    <span class="person-role">{{ stage.stagiaire.annee_etude }} &bull; {{ stage.stagiaire.filiere }}</span>
+                  </div>
+                </div>
+                {% if stage.progression_pourcentage >= 70 %}
+                  <span class="badge badge-success">En cours</span>
+                {% else %}
+                  <span class="badge badge-warning">Révision</span>
+                {% endif %}
+              </div>
+
+              <div class="progress-row">
+                <span>Progression Globale</span>
+                <strong>{{ stage.progression_pourcentage }}%</strong>
+              </div>
+              <div class="progress-bar" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
+
+              <div class="intern-actions">
+                <button class="btn btn-primary btn-sm">Profil</button>
+                <button class="btn btn-outline btn-sm">Évaluer</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="panel">
+          <p style="color:var(--color-text-muted); font-size:14px;">
+            Vous n'encadrez aucun stagiaire actif pour le moment.
+          </p>
+        </div>
+      {% endif %}
+
+      {% if fin_de_periode %}
+        <div class="panel panel--dark deadline-panel">
+          <div class="deadline-copy">
+            <h3>Fin de Période</h3>
+            <p>
+              Le stage de {{ fin_de_periode.stagiaire.user.get_full_name }} se termine le
+              {{ fin_de_periode.date_fin|date:"d F Y" }}. Veuillez compléter l'évaluation finale.
+            </p>
+          </div>
+          <button class="btn btn-primary">
+            Remplir l'Évaluation de Fin de Stage
+            <i data-lucide="arrow-up-right"></i>
+          </button>
+        </div>
+      {% endif %}
+
+    </div>
+
+    <div class="dash-col">
+      <div class="panel">
+        <div class="panel-title-row">
+          <h2 class="panel-title" style="margin-bottom:0;">À Valider</h2>
+          <span class="count-badge">{{ nb_a_valider }}</span>
+        </div>
+
+        <div class="todo-list">
+          {% for rapport in rapports_a_valider %}
+            <div class="todo-item">
+              <span class="todo-icon" style="background:var(--color-primary-soft); color:var(--color-primary);">
+                <i data-lucide="clipboard-list"></i>
+              </span>
+              <div class="todo-content">
+                <div class="todo-title">Rapport Hebdomadaire S{{ rapport.numero_semaine }}</div>
+                <div class="todo-desc">Soumis par {{ rapport.stage.stagiaire.user.get_full_name }}</div>
+                <div class="todo-desc" style="margin-top:6px; color:var(--color-text-faint); display:flex; align-items:center; gap:5px;">
+                  <i data-lucide="clock" style="width:13px;height:13px;"></i> {{ rapport.date_soumission|timesince }}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+
+          {% for demande in demandes_en_attente %}
+            <div class="todo-item">
+              <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
+                <i data-lucide="user-plus"></i>
+              </span>
+              <div class="todo-content">
+                <div class="todo-title">Demande d'encadrement</div>
+                <div class="todo-desc">{{ demande.stage.stagiaire.user.get_full_name }} souhaite vous avoir comme tuteur</div>
+                <div class="todo-desc" style="margin-top:6px; color:var(--color-text-faint); display:flex; align-items:center; gap:5px;">
+                  <i data-lucide="clock" style="width:13px;height:13px;"></i> {{ demande.date_demande|timesince }}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+
+          {% if not rapports_a_valider and not demandes_en_attente %}
+            <p style="color:var(--color-text-muted); font-size:14px;">Rien à valider pour le moment 🎉</p>
+          {% endif %}
+        </div>
+
+        <button class="list-cta">Voir toutes les tâches</button>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

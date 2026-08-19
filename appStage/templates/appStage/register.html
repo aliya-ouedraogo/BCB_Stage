@@ -1,0 +1,96 @@
+{% extends "appStage/base_auth.html" %}
+{% load static %}
+
+{% block title %}Créer un compte — BCBStageFlow{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appStage/css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <div class="auth-card">
+
+    <section class="auth-showcase" aria-hidden="true">
+      <div class="auth-brand">
+        <span class="brand-mark"><i data-lucide="layout-grid"></i></span>
+        BCBStageFlow
+      </div>
+      <div class="auth-visual"></div>
+      <div class="auth-copy">
+        <h2>Rejoignez le portail de gestion.</h2>
+        <p>Créez votre compte selon votre profil : stagiaire, maître de stage ou ressources humaines.</p>
+      </div>
+    </section>
+
+    <section class="auth-form-panel">
+      <h1>Créer un compte</h1>
+      <p class="auth-subtitle">Quelques informations pour configurer votre espace.</p>
+
+      {% if form.non_field_errors %}
+        <div class="form-errors">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" class="auth-fields">
+        {% csrf_token %}
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.first_name.id_for_label }}">Prénom</label>
+            {{ form.first_name }}
+            {% for error in form.first_name.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.last_name.id_for_label }}">Nom</label>
+            {{ form.last_name }}
+            {% for error in form.last_name.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.email.id_for_label }}">Adresse e-mail</label>
+          {{ form.email }}
+          {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+          {{ form.username }}
+          {% for error in form.username.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.role.id_for_label }}">Vous êtes</label>
+          {{ form.role }}
+          {% for error in form.role.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.password1.id_for_label }}">Mot de passe</label>
+            {{ form.password1 }}
+            {% for error in form.password1.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.password2.id_for_label }}">Confirmer</label>
+            {{ form.password2 }}
+            {% for error in form.password2.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+          Créer mon compte
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Déjà un compte ? <a href="{% url 'appStage:login' %}">Se connecter</a>
+      </p>
+    </section>
+
+  </div>
+</main>
+{% endblock %}
