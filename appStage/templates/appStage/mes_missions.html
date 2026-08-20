@@ -1,0 +1,51 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Mes Missions — BCBStageFlow{% endblock %}
+{% block page_title %}Mes Missions{% endblock %}
+{% block page_subtitle %}<span class="subtitle">L'ensemble des missions qui vous ont été confiées durant votre stage.</span>{% endblock %}
+
+{% block dashboard_content %}
+  {% if not stage %}
+    <div class="empty-state">
+      <i data-lucide="inbox"></i>
+      <h2>Aucun stage en cours</h2>
+      <p>Vous n'avez pas de mission à afficher pour le moment.</p>
+    </div>
+  {% else %}
+    <div class="panel">
+      {% for mission in missions %}
+        <div class="mission-item {% if mission.statut == 'TERMINEE' %}is-done{% endif %}">
+          <span class="mission-item-icon"><i data-lucide="git-branch"></i></span>
+          <div style="flex:1;">
+            <div class="mission-item-title">{{ mission.titre }}</div>
+            <div class="mission-item-sub">
+              {{ mission.equipe }}
+              {% if mission.echeance %} &bull; Échéance le {{ mission.echeance|date:"d M Y" }}{% endif %}
+            </div>
+            {% if mission.description %}
+              <p style="font-size:13px; color:var(--color-text-muted); margin-top:8px;">{{ mission.description }}</p>
+            {% endif %}
+          </div>
+          {% if mission.statut == 'TERMINEE' %}
+            <span class="badge badge-neutral">Terminée</span>
+          {% elif mission.statut == 'EN_COURS' %}
+            <span class="badge badge-success">En cours</span>
+          {% else %}
+            <span class="badge badge-info">À faire</span>
+          {% endif %}
+          {% if mission.statut != 'TERMINEE' %}
+            <form method="post" action="{% url 'appStage:avancer_mission' mission.id %}" style="margin-left:10px;">
+              {% csrf_token %}
+              <input type="hidden" name="retour" value="{% url 'appStage:mes_missions' %}">
+              <button type="submit" class="btn btn-outline btn-sm">
+                {% if mission.statut == 'A_FAIRE' %}Démarrer{% else %}Marquer terminée{% endif %}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucune mission assignée pour le moment.</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

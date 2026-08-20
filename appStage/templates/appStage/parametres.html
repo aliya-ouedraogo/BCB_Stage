@@ -1,0 +1,50 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Paramètres — BCBStageFlow{% endblock %}
+{% block page_title %}Paramètres du Compte{% endblock %}
+
+{% block dashboard_content %}
+  <div class="panel" style="max-width:560px;">
+    {% if form.non_field_errors %}
+      <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="auth-fields">
+      {% csrf_token %}
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+          {{ form.first_name }}
+          {% for e in form.first_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+          {{ form.last_name }}
+          {% for e in form.last_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+        {{ form.email }}
+        {% for e in form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }}</label>
+        {{ form.telephone }}
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+        {% if user.photo %}
+          <img src="{{ user.photo.url }}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
+        {% endif %}
+        {{ form.photo }}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">Enregistrer les modifications</button>
+    </form>
+  </div>
+{% endblock %}

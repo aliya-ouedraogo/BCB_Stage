@@ -9,7 +9,7 @@
 {% block content %}
 <div class="dashboard-body">
 
-  <!-- ============== Sidebar ============== -->
+  <!-- ============== Sidebar (desktop) ============== -->
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="brand">
@@ -21,19 +21,24 @@
       </div>
 
       <nav class="sidebar-nav">
-        {% block nav %}{% endblock %}
+        {% for item in nav_items %}
+          <a href="{% url item.url_name %}"
+             class="nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}">
+            <i data-lucide="{{ item.icon }}"></i> {{ item.label }}
+          </a>
+        {% endfor %}
       </nav>
     </div>
 
     <div class="sidebar-bottom">
       {% block sidebar_cta %}{% endblock %}
       <div class="sidebar-divider"></div>
-      <a href="#" class="sidebar-footer-link">
-        <i data-lucide="user-cog"></i> Paramètres du compte
-      </a>
-      <a href="{% url 'appStage:onboarding' %}" class="sidebar-footer-link">
-        <i data-lucide="log-out"></i> Déconnexion
-      </a>
+      <form method="post" action="{% url 'appStage:logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="sidebar-footer-link sidebar-logout">
+          <i data-lucide="log-out"></i> Déconnexion
+        </button>
+      </form>
     </div>
   </aside>
 
@@ -47,20 +52,20 @@
       </div>
 
       <div class="topbar-actions">
-        <button class="icon-btn" aria-label="Rechercher">
+        <button class="icon-btn is-disabled" aria-label="Recherche (bientôt disponible)" title="Bientôt disponible" disabled>
           <i data-lucide="search"></i>
         </button>
-        <button class="icon-btn" aria-label="Notifications">
+        <button class="icon-btn is-disabled" aria-label="Notifications (bientôt disponible)" title="Bientôt disponible" disabled>
           <i data-lucide="bell"></i>
-          {% block notif_dot %}<span class="notif-dot"></span>{% endblock %}
         </button>
-        <div class="topbar-user">
+        <a href="{% url 'appStage:parametres' %}" class="topbar-user">
           <span class="user-avatar">
-            {% block user_avatar %}<i data-lucide="user"></i>{% endblock %}
+            {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            {% else %}<i data-lucide="user"></i>{% endif %}
           </span>
-          <span class="user-name">{% block user_name %}Utilisateur{% endblock %}</span>
+          <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
           <i data-lucide="chevron-down"></i>
-        </div>
+        </a>
       </div>
     </header>
 
@@ -70,6 +75,17 @@
   </div>
 
 </div>
+
+<!-- ============== Barre de navigation mobile ============== -->
+<nav class="bottom-nav">
+  {% for item in nav_items %}
+    <a href="{% url item.url_name %}"
+       class="bottom-nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}">
+      <i data-lucide="{{ item.icon }}"></i>
+      <span>{{ item.label }}</span>
+    </a>
+  {% endfor %}
+</nav>
 {% endblock %}
 
 {% block extra_js %}

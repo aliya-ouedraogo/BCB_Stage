@@ -2,21 +2,8 @@
 
 {% block title %}Mon Espace Stagiaire — BCBStageFlow{% endblock %}
 
-{% block nav %}
-  <a href="{% url 'appStage:dashboard_stagiaire' %}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-  <a href="#" class="nav-item"><i data-lucide="users"></i> Interns</a>
-  <a href="#" class="nav-item"><i data-lucide="file-text"></i> Documents</a>
-  <a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a>
-{% endblock %}
-
 {% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;! 👋{% endblock %}
 {% block page_subtitle %}<span class="subtitle">Voici un aperçu de la progression de votre stage.</span>{% endblock %}
-
-{% block user_avatar %}
-  {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
-  {% else %}<i data-lucide="user"></i>{% endif %}
-{% endblock %}
-{% block user_name %}{{ user.first_name|default:user.username }}{% endblock %}
 
 {% block dashboard_content %}
 
@@ -71,7 +58,7 @@
         <div class="week-row">
           <span>Semaine {{ stage.semaines_ecoulees }} sur {{ stage.duree_totale_semaines }}</span>
           {% if not stage.maitre_de_stage %}
-            <a href="#">Choisir un maître de stage</a>
+            <a href="{% url 'appStage:choisir_tuteur' %}">Choisir un maître de stage</a>
           {% endif %}
         </div>
         <div class="progress-bar" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
@@ -139,7 +126,13 @@
           {% endif %}
         </div>
 
-        <button class="btn btn-primary btn-block">Mettre à jour le statut</button>
+        <form method="post" action="{% url 'appStage:avancer_mission' mission_actuelle.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="retour" value="{% url 'appStage:dashboard_stagiaire' %}">
+          <button type="submit" class="btn btn-primary btn-block">
+            {% if mission_actuelle.statut == 'A_FAIRE' %}Démarrer cette mission{% else %}Marquer comme terminée{% endif %}
+          </button>
+        </form>
       {% else %}
         <p style="color:var(--color-text-muted); font-size:14px;">Aucune mission assignée pour le moment.</p>
       {% endif %}
@@ -148,7 +141,7 @@
     <div class="panel">
       <div class="panel-title-row">
         <h2 class="panel-title" style="margin-bottom:0;">Documents Récents</h2>
-        <a href="#" class="link-arrow" style="font-size:13px;">Voir tout</a>
+        <a href="{% url 'appStage:mes_documents' %}" class="link-arrow" style="font-size:13px;">Voir tout</a>
       </div>
 
       {% for doc in documents_recents %}

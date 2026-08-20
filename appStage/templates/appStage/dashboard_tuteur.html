@@ -2,21 +2,8 @@
 
 {% block title %}Espace Maître de Stage — BCBStageFlow{% endblock %}
 
-{% block nav %}
-  <a href="{% url 'appStage:dashboard_tuteur' %}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-  <a href="#" class="nav-item"><i data-lucide="users"></i> Interns</a>
-  <a href="#" class="nav-item"><i data-lucide="file-text"></i> Documents</a>
-  <a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a>
-{% endblock %}
-
 {% block page_eyebrow %}<span class="eyebrow">Espace Maître de Stage</span>{% endblock %}
 {% block page_title %}Bonjour, {{ user.get_full_name|default:user.username }}{% endblock %}
-
-{% block user_avatar %}
-  {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
-  {% else %}<i data-lucide="user"></i>{% endif %}
-{% endblock %}
-{% block user_name %}{{ user.get_full_name|default:user.username }}{% endblock %}
 
 {% block dashboard_content %}
 
@@ -25,7 +12,7 @@
 
       <div class="section-head">
         <h2>Stagiaires Actifs</h2>
-        <a href="#" class="link-arrow">Voir tout <i data-lucide="arrow-right"></i></a>
+        <a href="{% url 'appStage:mes_stagiaires' %}" class="link-arrow">Voir tout <i data-lucide="arrow-right"></i></a>
       </div>
 
       {% if stages_encadres %}
@@ -58,8 +45,8 @@
               <div class="progress-bar" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
 
               <div class="intern-actions">
-                <button class="btn btn-primary btn-sm">Profil</button>
-                <button class="btn btn-outline btn-sm">Évaluer</button>
+                <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="btn btn-primary btn-sm">Profil</a>
+                <a href="{% url 'appStage:evaluer' stage.id %}" class="btn btn-outline btn-sm">Évaluer</a>
               </div>
             </div>
           {% endfor %}
@@ -81,10 +68,10 @@
               {{ fin_de_periode.date_fin|date:"d F Y" }}. Veuillez compléter l'évaluation finale.
             </p>
           </div>
-          <button class="btn btn-primary">
+          <a href="{% url 'appStage:evaluer' fin_de_periode.id %}" class="btn btn-primary">
             Remplir l'Évaluation de Fin de Stage
             <i data-lucide="arrow-up-right"></i>
-          </button>
+          </a>
         </div>
       {% endif %}
 
@@ -118,11 +105,18 @@
               <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
                 <i data-lucide="user-plus"></i>
               </span>
-              <div class="todo-content">
+              <div class="todo-content" style="flex:1;">
                 <div class="todo-title">Demande d'encadrement</div>
                 <div class="todo-desc">{{ demande.stage.stagiaire.user.get_full_name }} souhaite vous avoir comme tuteur</div>
-                <div class="todo-desc" style="margin-top:6px; color:var(--color-text-faint); display:flex; align-items:center; gap:5px;">
-                  <i data-lucide="clock" style="width:13px;height:13px;"></i> {{ demande.date_demande|timesince }}
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'accepter' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm">Accepter</button>
+                  </form>
+                  <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'refuser' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline btn-sm">Refuser</button>
+                  </form>
                 </div>
               </div>
             </div>
@@ -133,7 +127,7 @@
           {% endif %}
         </div>
 
-        <button class="list-cta">Voir toutes les tâches</button>
+        <a href="{% url 'appStage:mes_stagiaires' %}" class="list-cta" style="display:block; text-align:center; text-decoration:none;">Voir toutes les tâches</a>
       </div>
     </div>
   </div>

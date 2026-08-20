@@ -339,6 +339,9 @@
   cursor: pointer;
   border: none;
   background: transparent;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 .tab-item.active { background: #fff; color: var(--color-text); box-shadow: var(--shadow-sm); }
 
@@ -668,6 +671,269 @@
 .feedback-date { font-size: 11.5px; color: var(--color-text-faint); margin-top: 14px; }
 
 /* ---------------------------------------------------------
+   Déconnexion (visible, distincte des autres liens de sidebar)
+   --------------------------------------------------------- */
+.logout-form { margin: 0; }
+.sidebar-logout {
+  width: 100%;
+  border: none;
+  background: rgba(220, 38, 38, 0.12);
+  color: #f5a3a3;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+.sidebar-logout:hover { background: rgba(220, 38, 38, 0.2); color: #fff; }
+
+/* Icônes topbar pas encore fonctionnelles (recherche, notifications) */
+.icon-btn.is-disabled { opacity: 0.4; cursor: not-allowed; }
+.icon-btn.is-disabled:hover { background: var(--color-surface); }
+
+/* ---------------------------------------------------------
+   Barre de navigation mobile (remplace la sidebar sous 860px)
+   --------------------------------------------------------- */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--color-ink);
+  border-top: 1px solid var(--color-ink-border);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  justify-content: space-around;
+  align-items: stretch;
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: var(--radius-sm);
+  color: #82829a;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: center;
+}
+.bottom-nav-item [data-lucide] { width: 20px; height: 20px; }
+.bottom-nav-item.active { color: #fff; }
+.bottom-nav-item.active [data-lucide] { color: var(--color-primary-light, #8b7bff); }
+
+/* ---------------------------------------------------------
+   Onglets de navigation interne (Fiche Stagiaire)
+   --------------------------------------------------------- */
+.detail-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
+}
+.detail-tab {
+  padding: 10px 2px 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.detail-tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+
+/* Fiche stagiaire : en-tête */
+.fiche-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.fiche-identity { display: flex; align-items: center; gap: 16px; }
+.fiche-identity .avatar { width: 64px; height: 64px; font-size: 20px; }
+.fiche-identity h1 { font-size: 26px; display: flex; align-items: center; gap: 10px; }
+.fiche-identity .subtitle { font-size: 14px; color: var(--color-text-muted); margin-top: 2px; }
+.fiche-actions { display: flex; gap: 10px; }
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 32px;
+}
+.info-grid dt { font-size: 12px; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.03em; }
+.info-grid dd { font-size: 14.5px; font-weight: 600; margin-top: 3px; }
+
+/* Missions (fiche + mes-missions), sans barre colorée */
+.mission-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+.mission-item:last-child { margin-bottom: 0; }
+.mission-item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: #f0f0f3;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mission-item.is-done .mission-item-title { text-decoration: line-through; color: var(--color-text-faint); }
+.mission-item-title { font-size: 14.5px; font-weight: 700; }
+.mission-item-sub { font-size: 12.5px; color: var(--color-text-muted); margin-top: 2px; }
+
+/* ---------------------------------------------------------
+   Formulaire d'évaluation
+   --------------------------------------------------------- */
+.eval-context-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.eval-context-card .avatar { width: 56px; height: 56px; font-size: 18px; }
+.eval-context-card .person-name { font-size: 17px; }
+
+.segmented {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: #f0f0f3;
+  gap: 4px;
+}
+.segmented-item {
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.segmented-item.active { background: var(--color-primary); color: #fff; }
+
+.score-donut-wrap { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+.score-donut {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: conic-gradient(var(--color-primary) calc(var(--score, 0) * 1%), #eceef1 0);
+}
+.score-donut-inner {
+  width: 98px;
+  height: 98px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.score-donut-inner strong { font-size: 28px; font-weight: 800; }
+.score-donut-inner span { font-size: 12px; color: var(--color-text-faint); }
+
+.criteria-list { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 16px; }
+.criteria-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  margin-bottom: 6px;
+}
+.criteria-row-head strong { font-weight: 700; }
+.criteria-slider {
+  width: 100%;
+  accent-color: var(--color-primary);
+  height: 6px;
+}
+
+.char-counter { text-align: right; font-size: 12px; color: var(--color-text-faint); margin-top: 6px; }
+
+.eval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---------------------------------------------------------
+   Listes pleine page (Mes Stagiaires / Stagiaires / Candidatures)
+   --------------------------------------------------------- */
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.filter-pill {
+  padding: 7px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+.filter-pill.active { background: var(--color-ink); color: #fff; border-color: var(--color-ink); }
+
+.person-row.is-link { cursor: pointer; }
+.person-row.is-link:hover { background: #fafafa; }
+
+.candidature-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.candidature-card:last-child { margin-bottom: 0; }
+.candidature-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.candidature-motif {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+.candidature-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 10px;
+  margin-top: 14px;
+  align-items: end;
+}
+.candidature-form-row .form-group { gap: 4px; }
+.candidature-form-row label { font-size: 11.5px; }
+.candidature-form-row input, .candidature-form-row select { height: 40px; font-size: 13.5px; }
+
+/* ---------------------------------------------------------
+   État vide générique
+   --------------------------------------------------------- */
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--color-text-muted);
+}
+.empty-state i { width: 32px; height: 32px; color: var(--color-text-faint); }
+.empty-state h2 { color: var(--color-text); margin-top: 14px; font-size: 18px; }
+.empty-state p { font-size: 14px; margin-top: 6px; max-width: 360px; margin-left: auto; margin-right: auto; }
+
+/* ---------------------------------------------------------
    Responsive
    --------------------------------------------------------- */
 @media (max-width: 1180px) {
@@ -676,15 +942,30 @@
   .mini-grid { grid-template-columns: 1fr; }
   .intern-grid { grid-template-columns: 1fr; }
   .progress-metrics { grid-template-columns: repeat(3, 1fr); }
+  .info-grid { grid-template-columns: 1fr; }
 }
 
+/* En dessous de 860px : la sidebar disparaît, remplacée par la barre basse */
 @media (max-width: 860px) {
-  .dashboard-body { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; align-items: center; flex-wrap: wrap; }
-  .sidebar-top, .sidebar-bottom { flex-direction: row; }
-  .topbar { padding: 24px 20px; }
+  .sidebar { display: none; }
+  .bottom-nav { display: flex; }
+  .dashboard-body { padding-bottom: 66px; } /* place pour la barre basse */
+
+  .topbar { padding: 20px 20px 16px; }
+  .topbar-heading h1 { font-size: 24px; }
   .dashboard-content { padding: 0 20px 30px; }
+
   .stat-grid { grid-template-columns: 1fr; }
   .progress-metrics { grid-template-columns: 1fr; }
   .progress-metrics > div:not(:first-child) { border-left: none; padding-left: 0; border-top: 1px solid var(--color-border); padding-top: 12px; }
+
+  .fiche-header { flex-direction: column; align-items: flex-start; }
+  .score-donut-wrap { flex-direction: column; align-items: stretch; }
+  .candidature-form-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .topbar-user .user-name { display: none; }
+  .search-input { display: none; }
+  .detail-tabs { gap: 16px; overflow-x: auto; }
 }

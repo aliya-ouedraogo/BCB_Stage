@@ -324,7 +324,14 @@ class Evaluation(models.Model):
 
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='evaluations')
     type_evaluation = models.CharField(max_length=20, choices=TypeEvaluation.choices)
-    note = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+
+    # Notation par critère (sur 20 chacun) : la note globale est leur moyenne,
+    # affichée en anneau de progression sur le formulaire d'évaluation.
+    note_technique = models.PositiveSmallIntegerField(default=10)
+    note_autonomie = models.PositiveSmallIntegerField(default=10)
+    note_communication = models.PositiveSmallIntegerField(default=10)
+    note_ponctualite = models.PositiveSmallIntegerField(default=10)
+
     commentaire = models.TextField(blank=True)
     date_evaluation = models.DateField(auto_now_add=True)
 
@@ -333,6 +340,12 @@ class Evaluation(models.Model):
 
     def __str__(self):
         return f"Évaluation {self.get_type_evaluation_display()} — {self.stage}"
+
+    @property
+    def note(self):
+        """Note globale sur 20, moyenne des 4 critères."""
+        return round((self.note_technique + self.note_autonomie
+                      + self.note_communication + self.note_ponctualite) / 4, 1)
 
 
 class Mission(models.Model):

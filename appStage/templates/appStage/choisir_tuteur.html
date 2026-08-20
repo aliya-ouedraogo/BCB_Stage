@@ -1,0 +1,53 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Choisir un maître de stage — BCBStageFlow{% endblock %}
+{% block page_title %}Choisir un Maître de Stage{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Envoyez une demande d'encadrement — le tuteur devra l'accepter depuis son tableau de bord.</span>{% endblock %}
+
+{% block dashboard_content %}
+  {% if not stage %}
+    <div class="empty-state">
+      <i data-lucide="inbox"></i>
+      <h2>Aucun stage en cours</h2>
+    </div>
+  {% elif stage.maitre_de_stage %}
+    <div class="panel" style="display:flex; align-items:center; gap:14px;">
+      <span class="avatar" style="width:48px;height:48px;"><i data-lucide="check"></i></span>
+      <div>
+        <div class="person-name">Vous êtes déjà encadré(e) par {{ stage.maitre_de_stage.user.get_full_name }}</div>
+        <div class="person-role">{{ stage.maitre_de_stage.poste }}</div>
+      </div>
+    </div>
+  {% elif demande_existante %}
+    <div class="panel" style="display:flex; align-items:center; gap:14px;">
+      <span class="avatar" style="width:48px;height:48px;"><i data-lucide="clock"></i></span>
+      <div>
+        <div class="person-name">Demande envoyée à {{ demande_existante.maitre_de_stage_demande.user.get_full_name }}</div>
+        <div class="person-role">En attente de sa réponse</div>
+      </div>
+    </div>
+  {% else %}
+    <div class="panel">
+      {% for tuteur in tuteurs %}
+        <div class="person-row">
+          {% if tuteur.user.photo %}
+            <img class="avatar" src="{{ tuteur.user.photo.url }}" alt="">
+          {% else %}
+            <span class="avatar">{{ tuteur.user.first_name|first }}{{ tuteur.user.last_name|first }}</span>
+          {% endif %}
+          <div class="person-info">
+            <span class="person-name">{{ tuteur.user.get_full_name }}</span>
+            <span class="person-role">{{ tuteur.poste }}{% if tuteur.departement_affiliation %} &bull; {{ tuteur.departement_affiliation }}{% endif %}</span>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="tuteur_id" value="{{ tuteur.id }}">
+            <button type="submit" class="btn btn-primary btn-sm">Envoyer une demande</button>
+          </form>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucun maître de stage disponible pour le moment.</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

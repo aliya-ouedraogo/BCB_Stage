@@ -2,20 +2,7 @@
 
 {% block title %}Vue d'Ensemble — RH — BCBStageFlow{% endblock %}
 
-{% block nav %}
-  <a href="{% url 'appStage:dashboard_rh' %}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-  <a href="#" class="nav-item"><i data-lucide="users"></i> Interns</a>
-  <a href="#" class="nav-item"><i data-lucide="file-text"></i> Documents</a>
-  <a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a>
-{% endblock %}
-
 {% block page_title %}Vue d'Ensemble{% endblock %}
-
-{% block user_avatar %}
-  {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
-  {% else %}<i data-lucide="shield"></i>{% endif %}
-{% endblock %}
-{% block user_name %}{{ user.get_full_name|default:user.username }}{% endblock %}
 
 {% block dashboard_content %}
 
@@ -54,20 +41,20 @@
   </div>
 
   <!-- Colonnes : liste stagiaires + panneau latéral -->
-  <div class="dash-grid"> 
+  <div class="dash-grid">
     <div class="dash-col">
       <div class="panel">
         <div class="panel-title-row">
           <h2 class="panel-title" style="margin-bottom:0;">Stagiaires Récents</h2>
           <div class="tab-group">
-            <button class="tab-item active">Tous</button>
-            <button class="tab-item">Actifs</button>
-            <button class="tab-item">Terminés</button>
+            <a href="{% url 'appStage:dashboard_rh' %}" class="tab-item {% if not filtre_statut %}active{% endif %}">Tous</a>
+            <a href="?statut=EN_COURS" class="tab-item {% if filtre_statut == 'EN_COURS' %}active{% endif %}">Actifs</a>
+            <a href="?statut=TERMINE" class="tab-item {% if filtre_statut == 'TERMINE' %}active{% endif %}">Terminés</a>
           </div>
         </div>
 
         {% for stage in stagiaires_recents %}
-          <div class="person-row">
+          <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link">
             {% if stage.stagiaire.user.photo %}
               <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
             {% else %}
@@ -87,14 +74,14 @@
             {% else %}
               <span class="badge badge-warning">Résilié</span>
             {% endif %}
-          </div>
+          </a>
         {% empty %}
           <p style="color:var(--color-text-muted); font-size:14px; padding:20px 0;">
             Aucun stagiaire enregistré pour le moment.
           </p>
         {% endfor %}
 
-        <button class="list-cta">Voir tous les stagiaires</button>
+        <a href="{% url 'appStage:liste_stagiaires' %}" class="list-cta" style="display:block; text-align:center; text-decoration:none;">Voir tous les stagiaires</a>
       </div>
     </div>
 
@@ -103,7 +90,7 @@
         <span class="announce-icon"><i data-lucide="megaphone"></i></span>
         <h3>Campagne Été 2024</h3>
         <p>Il est temps de lancer les recrutements pour les stages d'été. Préparez vos offres.</p>
-        <button class="btn btn-primary">Créer une offre</button>
+        <a href="{% url 'appStage:candidatures' %}" class="btn btn-primary">Voir les candidatures</a>
       </div>
 
       <div class="panel">

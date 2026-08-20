@@ -89,6 +89,16 @@ class Command(BaseCommand):
             description="Finaliser la migration des anciens points de terminaison vers GraphQL.",
             echeance=aujourdhui + datetime.timedelta(days=3), statut=Mission.Statut.EN_COURS,
         )
+        Mission.objects.create(
+            stage=stage_mariam, titre="Correction de bugs", equipe="Maintenance Sprint 4",
+            description="Résoudre les tickets de bugs remontés en fin de sprint précédent.",
+            echeance=aujourdhui - datetime.timedelta(days=4), statut=Mission.Statut.TERMINEE,
+        )
+        Mission.objects.create(
+            stage=stage_mariam, titre="Tests unitaires", equipe="Assurance Qualité",
+            description="Écrire la suite de tests unitaires pour le module d'authentification.",
+            echeance=aujourdhui + datetime.timedelta(days=10), statut=Mission.Statut.A_FAIRE,
+        )
         RapportHebdomadaire.objects.create(
             stage=stage_mariam, numero_semaine=1, statut=RapportHebdomadaire.Statut.VALIDE,
         )
@@ -101,7 +111,7 @@ class Command(BaseCommand):
         )
         Evaluation.objects.create(
             stage=stage_mariam, type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS,
-            note=17.5,
+            note_technique=17, note_autonomie=15, note_communication=16, note_ponctualite=18,
             commentaire="Mariam a fait preuve d'une excellente initiative sur les dernières tâches liées à l'API. "
                         "La qualité du code est constamment élevée. Point d'attention : améliorer la documentation.",
         )
@@ -125,9 +135,9 @@ class Command(BaseCommand):
             date_soumission=timezone.now() - datetime.timedelta(hours=2),
         )
 
-        # --- Stage Aliya : en cours, tuteur assigné, en révision ---
+        # --- Stage Aliya : en cours, PAS de tuteur assigné (demande en attente) ---
         stage_aliya = Stage.objects.create(
-            stagiaire=profil_aliya, departement=dep_rh, maitre_de_stage=profil_tuteur,
+            stagiaire=profil_aliya, departement=dep_rh,
             intitule_poste="Stagiaire Ressources Humaines",
             date_debut=aujourdhui - datetime.timedelta(weeks=5),
             date_fin=aujourdhui + datetime.timedelta(weeks=7),
@@ -158,8 +168,8 @@ class Command(BaseCommand):
             statut_signature=DocumentStage.StatutSignature.EN_ATTENTE,
         )
 
-        # --- Demande d'encadrement en attente (Geoffroy vers M. Kader) ---
-        DemandeEncadrement.objects.create(stage=stage_geoffroy, maitre_de_stage_demande=profil_tuteur)
+        # --- Demande d'encadrement en attente (Aliya vers M. Kader) ---
+        DemandeEncadrement.objects.create(stage=stage_aliya, maitre_de_stage_demande=profil_tuteur)
 
         # --- Entretien RH consigné ---
         Entretien.objects.create(

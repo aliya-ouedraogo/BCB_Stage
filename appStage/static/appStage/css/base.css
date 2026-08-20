@@ -2,9 +2,7 @@
    BCBStageFlow — Base / reset / utilitaires communs
    ========================================================= */
 
-*, *::before, *::after { 
-  box-sizing: border-box; 
-}
+*, *::before, *::after { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
 

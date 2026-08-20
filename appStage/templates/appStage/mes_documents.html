@@ -1,0 +1,42 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Mes Documents — BCBStageFlow{% endblock %}
+{% block page_title %}Mes Documents{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Convention, contrat, rapports et autres documents liés à votre stage.</span>{% endblock %}
+
+{% block dashboard_content %}
+  {% if not stage %}
+    <div class="empty-state">
+      <i data-lucide="inbox"></i>
+      <h2>Aucun stage en cours</h2>
+      <p>Vous n'avez pas de document à afficher pour le moment.</p>
+    </div>
+  {% else %}
+    <div class="panel">
+      {% for doc in documents %}
+        <div class="doc-row">
+          {% if doc.type_document == 'CONVENTION' or doc.type_document == 'CONTRAT' %}
+            <span class="doc-icon doc-icon--pdf"><i data-lucide="file-text"></i></span>
+          {% elif doc.type_document == 'RAPPORT' %}
+            <span class="doc-icon doc-icon--doc"><i data-lucide="file"></i></span>
+          {% else %}
+            <span class="doc-icon doc-icon--folder"><i data-lucide="folder"></i></span>
+          {% endif %}
+          <div class="doc-info" style="flex:1;">
+            <div class="doc-name">{{ doc.nom }}</div>
+            <div class="doc-meta">
+              {{ doc.get_type_document_display }} &bull; Ajouté {{ doc.date_ajout|timesince }}
+              {% if doc.statut_signature == 'SIGNE' %} &bull; Signé le {{ doc.date_signature|date:"d M Y" }}
+              {% elif doc.statut_signature == 'EN_ATTENTE' %} &bull; En attente de signature{% endif %}
+            </div>
+          </div>
+          {% if doc.fichier %}
+            <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i> Télécharger</a>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucun document pour le moment.</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

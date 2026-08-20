@@ -1,0 +1,158 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}{{ stage.stagiaire.user.get_full_name }} — BCBStageFlow{% endblock %}
+
+{% block page_css %}
+<style>
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+  <a href="javascript:history.back()" class="link-arrow" style="margin-bottom:16px;">
+    <i data-lucide="arrow-left"></i> Retour
+  </a>
+
+  <div class="fiche-header">
+    <div class="fiche-identity">
+      {% if stage.stagiaire.user.photo %}
+        <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
+      {% else %}
+        <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
+      {% endif %}
+      <div>
+        <h1>
+          {{ stage.stagiaire.user.get_full_name }}
+          {% if stage.statut == 'EN_COURS' %}<span class="badge badge-success">En cours</span>
+          {% elif stage.statut == 'TERMINE' %}<span class="badge badge-neutral">Terminé</span>
+          {% else %}<span class="badge badge-info">{{ stage.get_statut_display }}</span>{% endif %}
+        </h1>
+        <div class="subtitle">{{ stage.intitule_poste }}</div>
+      </div>
+    </div>
+    <div class="fiche-actions">
+      {% if peut_evaluer %}
+        <a href="{% url 'appStage:evaluer' stage.id %}" class="btn btn-primary"><i data-lucide="star"></i> Évaluer ce stagiaire</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="dash-grid" style="margin-bottom:24px;">
+    <div class="dash-col">
+      <div class="panel">
+        <h2 class="panel-title">Informations Clés</h2>
+        <dl class="info-grid">
+          <div><dt>Département</dt><dd>{{ stage.departement.nom }}</dd></div>
+          <div><dt>Dates</dt><dd>{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</dd></div>
+          <div><dt>Filière</dt><dd>{{ stage.stagiaire.filiere|default:"—" }}</dd></div>
+          <div><dt>Année</dt><dd>{{ stage.stagiaire.annee_etude|default:"—" }}</dd></div>
+          <div><dt>Maître de stage</dt><dd>{{ stage.maitre_de_stage.user.get_full_name|default:"Non assigné" }}</dd></div>
+          <div><dt>Soutenance / Rapports</dt><dd>{% if stage.avec_soutenance %}Oui{% else %}Non{% endif %}</dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="dash-col">
+      <div class="panel">
+        <h2 class="panel-title">Progression du Stage</h2>
+        <div style="font-size:34px; font-weight:800; color:var(--color-primary);">{{ stage.progression_pourcentage }}%</div>
+        <div class="progress-bar" style="margin-top:10px;" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
+        <p style="font-size:13px; color:var(--color-text-muted); margin-top:10px;">
+          Semaine {{ stage.semaines_ecoulees }} sur {{ stage.duree_totale_semaines }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="detail-tabs" role="tablist">
+      <button class="detail-tab active" data-tab="missions">Missions</button>
+      <button class="detail-tab" data-tab="documents">Documents</button>
+      <button class="detail-tab" data-tab="presence">Présence</button>
+      <button class="detail-tab" data-tab="evaluations">Évaluations</button>
+    </div>
+
+    <div class="tab-panel active" data-panel="missions">
+      {% for mission in missions %}
+        <div class="mission-item {% if mission.statut == 'TERMINEE' %}is-done{% endif %}">
+          <span class="mission-item-icon"><i data-lucide="git-branch"></i></span>
+          <div style="flex:1;">
+            <div class="mission-item-title">{{ mission.titre }}</div>
+            <div class="mission-item-sub">{{ mission.equipe }}</div>
+          </div>
+          {% if mission.statut == 'TERMINEE' %}<span class="badge badge-neutral">Terminée</span>
+          {% elif mission.statut == 'EN_COURS' %}<span class="badge badge-success">En cours</span>
+          {% else %}<span class="badge badge-info">À faire</span>{% endif %}
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucune mission.</p>
+      {% endfor %}
+    </div>
+
+    <div class="tab-panel" data-panel="documents">
+      {% for doc in documents %}
+        <div class="doc-row">
+          <span class="doc-icon doc-icon--pdf"><i data-lucide="file-text"></i></span>
+          <div class="doc-info">
+            <div class="doc-name">{{ doc.nom }}</div>
+            <div class="doc-meta">{{ doc.get_type_document_display }} &bull; {{ doc.date_ajout|date:"d M Y" }}</div>
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucun document.</p>
+      {% endfor %}
+    </div>
+
+    <div class="tab-panel" data-panel="presence">
+      <p style="font-size:14px; margin-bottom:14px;">
+        Taux de présence : <strong>{{ stage.taux_presence|default:"—" }}%</strong>
+      </p>
+      {% for p in presences %}
+        <div class="doc-row">
+          <span class="doc-icon {% if p.present %}doc-icon--doc{% else %}doc-icon--pdf{% endif %}">
+            <i data-lucide="{% if p.present %}check{% else %}x{% endif %}"></i>
+          </span>
+          <div class="doc-info">
+            <div class="doc-name">{{ p.date|date:"l d F Y" }}</div>
+            <div class="doc-meta">
+              {% if p.present %}Présent{% else %}Absent{% if p.justifie %} (justifié){% endif %}{% endif %}
+              {% if p.valide_par_tuteur %} &bull; Confirmé par le tuteur{% endif %}
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucune présence enregistrée.</p>
+      {% endfor %}
+    </div>
+
+    <div class="tab-panel" data-panel="evaluations">
+      {% for ev in evaluations %}
+        <div class="doc-row" style="align-items:flex-start;">
+          <span class="doc-icon doc-icon--doc"><i data-lucide="star"></i></span>
+          <div class="doc-info" style="flex:1;">
+            <div class="doc-name">{{ ev.get_type_evaluation_display }} — {{ ev.note }}/20</div>
+            <div class="doc-meta" style="margin-bottom:6px;">{{ ev.date_evaluation|date:"d M Y" }}</div>
+            {% if ev.commentaire %}<p style="font-size:13.5px; color:var(--color-text-muted);">{{ ev.commentaire }}</p>{% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Pas encore d'évaluation.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+  document.querySelectorAll('.detail-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelector('.tab-panel[data-panel="' + tab.dataset.tab + '"]').classList.add('active');
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Évaluer {{ stage.stagiaire.user.get_full_name }} — BCBStageFlow{% endblock %}
+
+{% block dashboard_content %}
+
+  <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="link-arrow" style="margin-bottom:16px;">
+    <i data-lucide="arrow-left"></i> Retour à la fiche de {{ stage.stagiaire.user.get_full_name }}
+  </a>
+
+  <h1 style="margin-bottom:4px;">Évaluer {{ stage.stagiaire.user.get_full_name }}</h1>
+  <p class="subtitle" style="margin-bottom:24px;">{{ stage.intitule_poste }}</p>
+
+  <div class="panel eval-context-card" style="margin-bottom:24px;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      {% if stage.stagiaire.user.photo %}
+        <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
+      {% else %}
+        <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
+      {% endif %}
+      <div>
+        <div class="person-name">{{ stage.stagiaire.user.get_full_name }}</div>
+        <div class="person-role">{{ stage.intitule_poste }} &bull; {{ stage.departement.nom }}</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:13px; color:var(--color-text-muted);">Progression du stage</div>
+      <div style="font-size:20px; font-weight:800; color:var(--color-primary);">{{ stage.progression_pourcentage }}% complété</div>
+    </div>
+  </div>
+
+  <form method="post" class="panel">
+    {% csrf_token %}
+
+    <div class="form-group" style="margin-bottom:24px;">
+      <label style="font-size:12px; text-transform:uppercase; letter-spacing:0.03em; color:var(--color-text-faint);">
+        Type d'évaluation
+      </label>
+      <div class="segmented" style="margin-top:8px;">
+        <label class="segmented-item {% if form.type_evaluation.value == 'MI_PARCOURS' %}active{% endif %}">
+          <input type="radio" name="type_evaluation" value="MI_PARCOURS"
+                 {% if form.type_evaluation.value == 'MI_PARCOURS' %}checked{% endif %} style="display:none;">
+          <i data-lucide="trending-up" style="width:15px;height:15px;"></i> Mi-parcours
+        </label>
+        <label class="segmented-item {% if form.type_evaluation.value == 'FINALE' %}active{% endif %}">
+          <input type="radio" name="type_evaluation" value="FINALE"
+                 {% if form.type_evaluation.value == 'FINALE' %}checked{% endif %} style="display:none;">
+          <i data-lucide="flag" style="width:15px;height:15px;"></i> Finale
+        </label>
+      </div>
+    </div>
+
+    <h2 class="panel-title">Notation Globale</h2>
+    <div class="score-donut-wrap">
+      <div class="score-donut" id="score-donut" style="--score: 50;">
+        <div class="score-donut-inner">
+          <strong id="score-value">10</strong>
+          <span>/20</span>
+        </div>
+      </div>
+
+      <div class="criteria-list">
+        <div>
+          <div class="criteria-row-head">
+            <span>{{ form.note_technique.label }}</span>
+            <strong><span class="crit-value" data-for="note_technique">{{ form.note_technique.value|default:10 }}</span>/20</strong>
+          </div>
+          {{ form.note_technique }}
+        </div>
+        <div>
+          <div class="criteria-row-head">
+            <span>{{ form.note_autonomie.label }}</span>
+            <strong><span class="crit-value" data-for="note_autonomie">{{ form.note_autonomie.value|default:10 }}</span>/20</strong>
+          </div>
+          {{ form.note_autonomie }}
+        </div>
+        <div>
+          <div class="criteria-row-head">
+            <span>{{ form.note_communication.label }}</span>
+            <strong><span class="crit-value" data-for="note_communication">{{ form.note_communication.value|default:10 }}</span>/20</strong>
+          </div>
+          {{ form.note_communication }}
+        </div>
+        <div>
+          <div class="criteria-row-head">
+            <span>{{ form.note_ponctualite.label }}</span>
+            <strong><span class="crit-value" data-for="note_ponctualite">{{ form.note_ponctualite.value|default:10 }}</span>/20</strong>
+          </div>
+          {{ form.note_ponctualite }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:28px;">
+      <label style="font-size:12px; text-transform:uppercase; letter-spacing:0.03em; color:var(--color-text-faint);">
+        {{ form.commentaire.label }}
+      </label>
+      {{ form.commentaire }}
+      <div class="char-counter"><span id="char-count">0</span>/1000</div>
+    </div>
+
+    <div class="eval-actions">
+      <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="btn btn-outline">Annuler</a>
+      <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Enregistrer l'évaluation</button>
+    </div>
+  </form>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+  function majScore() {
+    var sliders = ['note_technique', 'note_autonomie', 'note_communication', 'note_ponctualite'];
+    var total = 0;
+    sliders.forEach(function (name) {
+      var input = document.querySelector('[name="' + name + '"]');
+      var value = parseInt(input.value, 10);
+      total += value;
+      document.querySelector('.crit-value[data-for="' + name + '"]').textContent = value;
+    });
+    var moyenne = Math.round((total / sliders.length) * 10) / 10;
+    document.getElementById('score-value').textContent = moyenne;
+    document.getElementById('score-donut').style.setProperty('--score', (moyenne / 20) * 100);
+  }
+
+  document.querySelectorAll('.criteria-slider').forEach(function (slider) {
+    slider.addEventListener('input', majScore);
+  });
+  majScore();
+
+  document.querySelectorAll('.segmented-item').forEach(function (label) {
+    label.addEventListener('click', function () {
+      document.querySelectorAll('.segmented-item').forEach(l => l.classList.remove('active'));
+      label.classList.add('active');
+    });
+  });
+
+  var commentaire = document.querySelector('[name="commentaire"]');
+  var compteur = document.getElementById('char-count');
+  function majCompteur() { compteur.textContent = commentaire.value.length; }
+  commentaire.addEventListener('input', majCompteur);
+  majCompteur();
+</script>
+{% endblock %}
