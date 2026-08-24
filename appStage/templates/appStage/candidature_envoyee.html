@@ -1,0 +1,28 @@
+{% extends "appStage/base_auth.html" %}
+{% load static %}
+
+{% block title %}Candidature envoyée — BCBStageFlow{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appStage/css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <div class="auth-card" style="grid-template-columns: 1fr;">
+    <section class="auth-form-panel auth-form-panel--compact" style="text-align:center; padding:48px 40px;">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--color-success-bg);color:var(--color-success);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <i data-lucide="check" style="width:22px;height:22px;"></i>
+      </div>
+      <h1 style="font-size:24px;">Candidature envoyée !</h1>
+      <p class="auth-subtitle" style="margin-top:10px;">
+        Notre équipe RH va l'examiner. Si elle est acceptée, vous recevrez un e-mail
+        avec un lien pour créer votre mot de passe et accéder à votre tableau de bord.
+      </p>
+      <a href="{% url 'appStage:onboarding' %}" class="btn btn-primary" style="margin-top:24px; display:inline-flex;">
+        Retour à l'accueil
+      </a>
+    </section>
+  </div>
+</main>
+{% endblock %}

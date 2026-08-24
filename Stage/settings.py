@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 load_dotenv()
 from pathlib import Path
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -63,6 +62,12 @@ LOGIN_URL = 'appStage:login'
 LOGIN_REDIRECT_URL = 'appStage:onboarding'  # secours ; ConnexionView redirige déjà selon le rôle
 LOGOUT_REDIRECT_URL = 'appStage:onboarding'
 
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@bcbstageflow.test')
+
+# URL de base utilisée pour construire les liens complets dans les emails
+# (ex: lien d'activation de compte). À changer en prod via variable d'env.
+SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -73,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'appStage.context_processors.nav_items',
             ],
         },
     },
@@ -99,8 +105,8 @@ if os.environ.get('MYSQL_DATABASE'):
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('MYSQL_DATABASE'),
-        'USER': os.environ.get('MYSQL_USER'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
+        'USER': os.environ.get('MYSQL_USER', 'root'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD', ''),
         'HOST': os.environ.get('MYSQL_HOST', 'localhost'),
         'PORT': os.environ.get('MYSQL_PORT', '3306'),
         'OPTIONS': {'charset': 'utf8mb4'},
@@ -152,9 +158,27 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
-
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+#
+# Par défaut : console (les emails s'affichent dans le terminal, aucune
+# configuration nécessaire en dev). Si EMAIL_HOST est défini dans
+# l'environnement, bascule automatiquement sur un vrai envoi SMTP —
+# même principe que la config MySQL plus haut.
+if os.environ.get('EMAIL_HOST'):
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': os.environ.get('EMAIL_HOST'),
+                'port': int(os.environ.get('EMAIL_PORT', 587)),
+                'username': os.environ.get('EMAIL_HOST_USER', ''),
+                'password': os.environ.get('EMAIL_HOST_PASSWORD', ''),
+                'use_tls': os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true',
+            },
+        },
+    }
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        },
+    }

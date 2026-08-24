@@ -4,8 +4,8 @@
 
 {% block dashboard_content %}
 
-  <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="link-arrow" style="margin-bottom:16px;">
-    <i data-lucide="arrow-left"></i> Retour à la fiche de {{ stage.stagiaire.user.get_full_name }}
+  <a href="javascript:history.back()" class="link-arrow" style="margin-bottom:16px;">
+    <i data-lucide="arrow-left"></i> Retour
   </a>
 
   <h1 style="margin-bottom:4px;">Évaluer {{ stage.stagiaire.user.get_full_name }}</h1>

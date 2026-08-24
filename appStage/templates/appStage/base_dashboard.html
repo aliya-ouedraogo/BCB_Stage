@@ -13,7 +13,7 @@
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="brand">
-        <span class="brand-icon">B</span>
+        <span class="brand-icon"><i data-lucide="layout-grid"></i></span>
         <div class="brand-text">
           <span class="brand-name">BCBStageFlow</span>
           <span class="brand-sub">Management Portal</span>
@@ -28,17 +28,6 @@
           </a>
         {% endfor %}
       </nav>
-    </div>
-
-    <div class="sidebar-bottom">
-      {% block sidebar_cta %}{% endblock %}
-      <div class="sidebar-divider"></div>
-      <form method="post" action="{% url 'appStage:logout' %}" class="logout-form">
-        {% csrf_token %}
-        <button type="submit" class="sidebar-footer-link sidebar-logout">
-          <i data-lucide="log-out"></i> Déconnexion
-        </button>
-      </form>
     </div>
   </aside>
 
@@ -70,6 +59,16 @@
     </header>
 
     <main class="dashboard-content">
+      {% if messages %}
+        <div class="messages-list">
+          {% for message in messages %}
+            <div class="app-message app-message--{{ message.tags|default:'info' }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       {% block dashboard_content %}{% endblock %}
     </main>
   </div>

@@ -1,0 +1,93 @@
+{% extends "appStage/base_auth.html" %}
+{% load static %}
+
+{% block title %}Déposer une candidature — BCBStageFlow{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appStage/css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <div class="auth-card">
+
+    <section class="auth-showcase" aria-hidden="true">
+      <div class="auth-brand">
+        <span class="brand-mark"><i data-lucide="layout-grid"></i></span>
+        BCBStageFlow
+      </div>
+      <div class="auth-visual"></div>
+      <div class="auth-copy">
+        <h2>Postulez à un stage.</h2>
+        <p>Envoyez votre candidature avec vos documents — notre équipe RH l'examinera et vous recontactera par e-mail.</p>
+      </div>
+    </section>
+
+    <section class="auth-form-panel auth-form-panel--compact">
+      <h1>Déposer une candidature</h1>
+      <p class="auth-subtitle">Aucun compte n'est nécessaire pour l'instant — vous en recevrez un par e-mail si votre candidature est acceptée.</p>
+
+      {% if form.non_field_errors %}
+        <div class="form-errors">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="auth-fields">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label for="{{ form.nom_complet.id_for_label }}">{{ form.nom_complet.label }}</label>
+          {{ form.nom_complet }}
+          {% for error in form.nom_complet.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }}</label>
+            {{ form.telephone }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.poste_souhaite.id_for_label }}">{{ form.poste_souhaite.label }}</label>
+          {{ form.poste_souhaite }}
+          {% for error in form.poste_souhaite.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.cv.id_for_label }}">{{ form.cv.label }}</label>
+          {{ form.cv }}
+          <span class="form-hint">Format PDF de préférence.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.lettre_motivation.id_for_label }}">{{ form.lettre_motivation.label }}</label>
+          {{ form.lettre_motivation }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.piece_identite.id_for_label }}">{{ form.piece_identite.label }}</label>
+          {{ form.piece_identite }}
+          <span class="form-hint">CNIB, passeport ou équivalent.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+          Envoyer ma candidature
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Déjà un compte ? <a href="{% url 'appStage:login' %}">Se connecter</a>
+      </p>
+    </section>
+
+  </div>
+</main>
+{% endblock %}

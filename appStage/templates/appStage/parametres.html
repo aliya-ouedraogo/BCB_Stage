@@ -1,50 +1,336 @@
+
+
 {% extends "appStage/base_dashboard.html" %}
+{% load static %}
 
 {% block title %}Paramètres — BCBStageFlow{% endblock %}
-{% block page_title %}Paramètres du Compte{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block page_css %}
+<style>
+/* Masquer la loupe de recherche et la cloche de notifications */
+.header-search,
+.search-bar,
+.search-box,
+.top-bar-search,
+input[type="search"],
+.search-container,
+button:has([data-lucide="bell"]),
+a:has([data-lucide="bell"]),
+button:has([data-lucide="search"]),
+a:has([data-lucide="search"]),
+.notification-btn,
+.notifications {
+  display: none !important;
+}
+
+.settings-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-width: 720px;
+  margin: 10px auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+}
+
+.settings-header {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-header-text h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 2px 0;
+}
+
+.settings-header-text p {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: #f3f4f6;
+  color: #374151;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-back:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  color: #111827;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group input[type="tel"]:focus,
+.form-group input[type="password"]:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-avatar-preview {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.form-group input[type="file"] {
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.form-group input[type="file"]::file-selector-button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background-color 0.2s;
+}
+
+.form-group input[type="file"]::file-selector-button:hover {
+  background-color: #e5e7eb;
+}
+
+.field-error {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 1px;
+}
+
+.form-errors {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+}
+
+.form-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-submit {
+  flex: 1;
+  padding: 8px 16px;
+  background-color: #0f172a;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+  background-color: #1e293b;
+}
+
+.btn-cancel {
+  padding: 8px 16px;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #e5e7eb;
+}
+
+.logout-card {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 16px;
+}
+
+.btn-logout {
+  padding: 9px 18px;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-logout:hover {
+  background-color: #b91c1c;
+}
+
+.btn-logout:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .logout-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+{% endblock %}
 
 {% block dashboard_content %}
-  <div class="panel" style="max-width:560px;">
-    {% if form.non_field_errors %}
-      <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
-    {% endif %}
+<div class="settings-card">
+  <div class="settings-header">
+    <div class="settings-header-text">
+      <h2>Informations personnelles</h2>
+      <p>Mettez à jour vos informations de profil ci-dessous.</p>
+    </div>
+    <a href="javascript:history.back()" class="btn-back">
+      ← Retour
+    </a>
+  </div>
 
-    <form method="post" enctype="multipart/form-data" class="auth-fields">
-      {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="form-errors">
+      {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+    </div>
+  {% endif %}
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
-          {{ form.first_name }}
-          {% for e in form.first_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-        </div>
-        <div class="form-group">
-          <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
-          {{ form.last_name }}
-          {% for e in form.last_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-        </div>
+  <form method="post" enctype="multipart/form-data" class="settings-form">
+    {% csrf_token %}
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+        {{ form.first_name }}
+        {% for e in form.first_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
       </div>
 
       <div class="form-group">
-        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
-        {{ form.email }}
-        {% for e in form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+        {{ form.last_name }}
+        {% for e in form.last_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }}</label>
-        {{ form.telephone }}
-      </div>
+    <div class="form-group">
+      <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+      {{ form.email }}
+      {% for e in form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
 
-      <div class="form-group">
-        <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+    <div class="form-group">
+      <label for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }}</label>
+      {{ form.telephone }}
+      {% for e in form.telephone.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+      <div class="file-upload-wrapper">
         {% if user.photo %}
-          <img src="{{ user.photo.url }}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
+          <img src="{{ user.photo.url }}" alt="Photo de profil" class="profile-avatar-preview">
         {% endif %}
         {{ form.photo }}
       </div>
+      {% for e in form.photo.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
 
-      <button type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">Enregistrer les modifications</button>
+    <div class="form-actions">
+      <a href="javascript:history.back()" class="btn-cancel">Annuler</a>
+      <button type="submit" class="btn-submit">Enregistrer les modifications</button>
+    </div>
+  </form>
+
+  <div class="logout-card">
+    <div>
+      <div style="font-weight:700; font-size:13.5px; color:#111827;">Se déconnecter</div>
+      <div style="font-size:12px; color:#6b7280; margin-top:1px;">Met fin à votre session sur cet appareil.</div>
+    </div>
+    <form method="post" action="{% url 'appStage:logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-logout">
+        <i data-lucide="log-out" style="width:16px; height:16px;"></i> Déconnexion
+      </button>
     </form>
   </div>
+</div>
 {% endblock %}

@@ -98,6 +98,15 @@
   justify-content: center;
 }
 
+/* Variante compacte : formulaire de candidature + page de confirmation
+   (plus de champs / contenu que login, donc besoin de moins d'air) */
+.auth-form-panel--compact { padding: 40px 48px; }
+.auth-form-panel--compact h1 { font-size: 26px; }
+.auth-form-panel--compact .auth-subtitle { font-size: 13.5px; margin-top: 6px; }
+.auth-form-panel--compact .auth-fields { margin-top: 18px; gap: 12px; }
+.auth-form-panel--compact .form-group input,
+.auth-form-panel--compact .form-group select { height: 40px; }
+
 .auth-form-panel h1 {
   font-size: 40px;
   font-weight: 800;
@@ -222,6 +231,68 @@
   margin-top: 2px;
 }
 
+/* ---------- Sections informatives (page d'accueil uniquement) ---------- */
+.homepage-section { padding: 72px 20px; }
+.homepage-section--alt { background: var(--color-surface); }
+.homepage-section-inner { max-width: 1080px; margin: 0 auto; text-align: center; }
+
+.homepage-section-title { font-size: 30px; font-weight: 800; letter-spacing: -0.01em; }
+.homepage-section-subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  margin-top: 10px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.audience-grid, .steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+  text-align: left;
+}
+
+.audience-card, .step-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+}
+.homepage-section--alt .audience-card,
+.homepage-section--alt .step-card { background: var(--color-bg); }
+
+.audience-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.audience-icon [data-lucide] { width: 21px; height: 21px; }
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.audience-card h3, .step-card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
+.audience-card p, .step-card p { font-size: 13.5px; color: var(--color-text-muted); line-height: 1.6; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   .auth-card {
@@ -231,6 +302,10 @@
   .auth-showcase { display: none; }
   .auth-form-panel { padding: 40px 28px; }
   .auth-form-panel h1 { font-size: 32px; }
+
+  .audience-grid, .steps-grid { grid-template-columns: 1fr; }
+  .homepage-section { padding: 48px 20px; }
+  .homepage-section-title { font-size: 24px; }
 }
 
 @media (max-width: 420px) {

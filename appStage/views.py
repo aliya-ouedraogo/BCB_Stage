@@ -2,17 +2,22 @@ import datetime
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
+from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
+from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.http import urlsafe_base64_decode
+from django.utils.safestring import mark_safe
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from .decorators import role_required
-from .forms import AccepterCandidatureForm, EvaluationForm, InscriptionForm, ParametresForm, RefuserCandidatureForm
+from .forms import AccepterCandidatureForm, CandidaturePubliqueForm, EvaluationForm, ParametresForm, RefuserCandidatureForm
 from .models import (
     Candidature,
     Departement,
@@ -22,7 +27,6 @@ from .models import (
     Mission,
     Presence,
     ProfilMaitreStage,
-    ProfilRH,
     ProfilStagiaire,
     RapportHebdomadaire,
     Stage,
@@ -51,28 +55,55 @@ class ConnexionView(LoginView):
 
 
 @never_cache
-def register(request):
+def candidature_publique(request):
+    """
+    Formulaire public de dépôt de candidature — remplace l'ancienne
+    inscription libre. Ne nécessite aucun compte : le RH créera le
+    compte automatiquement s'il accepte la candidature.
+    """
     if request.user.is_authenticated:
         return redirect(request.user.get_dashboard_url_name())
 
     if request.method == 'POST':
-        form = InscriptionForm(request.POST)
+        form = CandidaturePubliqueForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save()
+            form.save()
+            return render(request, 'appStage/candidature_envoyee.html')
+    else:
+        form = CandidaturePubliqueForm()
 
-            if user.role == User.Role.STAGIAIRE:
-                ProfilStagiaire.objects.create(user=user)
-            elif user.role == User.Role.RH:
-                ProfilRH.objects.create(user=user)
-            elif user.role == User.Role.MAITRE_STAGE:
-                ProfilMaitreStage.objects.create(user=user)
+    return render(request, 'appStage/candidature_publique.html', {'form': form})
 
+
+@never_cache
+def activer_compte(request, uidb64, token):
+    """
+    Lien reçu par email après acceptation d'une candidature : permet au
+    stagiaire de définir lui-même son mot de passe (jamais généré/envoyé
+    en clair) et active son compte.
+    """
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+        user = None
+
+    lien_valide = user is not None and default_token_generator.check_token(user, token)
+
+    if not lien_valide:
+        return render(request, 'appStage/activation_invalide.html', status=400)
+
+    if request.method == 'POST':
+        form = SetPasswordForm(user, request.POST)
+        if form.is_valid():
+            form.save()
             login(request, user)
+            messages.success(request, "Votre mot de passe est défini — bienvenue sur BCBStageFlow !")
             return redirect(user.get_dashboard_url_name())
     else:
-        form = InscriptionForm()
+        form = SetPasswordForm(user)
 
-    return render(request, 'appStage/register.html', {'form': form})
+    return render(request, 'appStage/activer_compte.html', {'form': form})
 
 
 @require_POST
@@ -159,14 +190,33 @@ def accepter_candidature(request, candidature_id):
     candidature = get_object_or_404(Candidature, pk=candidature_id, statut=Candidature.Statut.EN_ATTENTE)
     form = AccepterCandidatureForm(request.POST)
     if form.is_valid():
-        candidature.accepter(
+        _, _, lien_activation = candidature.accepter(
             departement=form.cleaned_data['departement'],
             traite_par=request.user.profil_rh,
             date_debut=form.cleaned_data['date_debut'],
             date_fin=form.cleaned_data['date_fin'],
             avec_soutenance=form.cleaned_data['avec_soutenance'],
         )
-        messages.success(request, f"Candidature de {candidature.nom_complet} acceptée — compte stagiaire créé.")
+        if settings.DEBUG:
+            # Filet de sécurité en développement : le lien s'affiche
+            # directement dans l'UI, pas besoin de dépendre du terminal
+            # où tourne runserver pour voir l'email envoyé.
+            #
+            # IMPORTANT : nom_complet vient d'un formulaire PUBLIC (saisie
+            # non fiable) — on l'échappe explicitement avant de l'insérer
+            # dans du HTML marqué safe, pour éviter toute injection XSS.
+            from django.utils.html import escape
+            nom_echappe = escape(candidature.nom_complet)
+            messages.success(
+                request,
+                mark_safe(
+                    f"Candidature de {nom_echappe} acceptée — compte créé. "
+                    f"<strong>Lien d'activation (visible uniquement en dev)&nbsp;:</strong> "
+                    f"<a href=\"{lien_activation}\">{lien_activation}</a>"
+                ),
+            )
+        else:
+            messages.success(request, f"Candidature de {candidature.nom_complet} acceptée — email envoyé.")
     else:
         messages.error(request, "Formulaire invalide : " + " ".join(
             f"{champ} : {', '.join(erreurs)}" for champ, erreurs in form.errors.items()

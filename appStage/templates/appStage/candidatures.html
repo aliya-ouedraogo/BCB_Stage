@@ -7,7 +7,12 @@
 {% block page_css %}
 <style>
   .candidature-accept-panel, .candidature-refuse-panel { display: none; }
-  .candidature-accept-panel.open, .candidature-refuse-panel.open { display: block; }
+  .candidature-accept-panel.open, .candidature-refuse-panel.open {
+  display: block;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--color-border);
+}
 </style>
 {% endblock %}
 
@@ -22,12 +27,33 @@
           <div style="font-size:12px; color:var(--color-text-faint); margin-top:4px;">
             Soumise {{ c.date_soumission|timesince }}
           </div>
+
+          <div style="display:flex; gap:14px; margin-top:10px;">
+            {% if c.cv %}
+              <a href="{{ c.cv.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
+                <i data-lucide="file-text" style="width:14px;height:14px;"></i> CV
+              </a>
+            {% endif %}
+            {% if c.lettre_motivation %}
+              <a href="{{ c.lettre_motivation.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
+                <i data-lucide="file" style="width:14px;height:14px;"></i> Lettre de motivation
+              </a>
+            {% endif %}
+            {% if c.piece_identite %}
+              <a href="{{ c.piece_identite.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
+                <i data-lucide="badge-check" style="width:14px;height:14px;"></i> CNIB
+              </a>
+            {% endif %}
+            {% if not c.cv and not c.lettre_motivation and not c.piece_identite %}
+              <span style="font-size:12.5px; color:var(--color-text-faint);">Aucun document joint</span>
+            {% endif %}
+          </div>
         </div>
 
         {% if c.statut == 'EN_ATTENTE' %}
           <div style="display:flex; gap:8px;">
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('refuse-{{ c.id }}').classList.toggle('open')">Refuser</button>
-            <button class="btn btn-primary btn-sm" onclick="document.getElementById('accept-{{ c.id }}').classList.toggle('open')">Accepter</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('accept-{{ c.id }}').classList.remove('open'); document.getElementById('refuse-{{ c.id }}').classList.toggle('open')">Refuser</button>
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('refuse-{{ c.id }}').classList.remove('open'); document.getElementById('accept-{{ c.id }}').classList.toggle('open')">Accepter</button>
           </div>
         {% elif c.statut == 'ACCEPTEE' %}
           <span class="badge badge-success">Acceptée</span>

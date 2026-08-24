@@ -53,8 +53,16 @@ class ProfilStagiaire(models.Model):
 
     @property
     def stage_actif(self):
-        """Le stage en cours de ce stagiaire, s'il y en a un."""
-        return self.stages.filter(statut=Stage.Statut.EN_COURS).first()
+        """
+        Le stage à afficher sur le dashboard du stagiaire : en priorité un
+        stage EN_COURS, sinon le plus proche A_VENIR (pour qu'un stagiaire
+        fraîchement accepté voie déjà la structure de son dashboard,
+        même avant le début officiel de son stage).
+        """
+        stage = self.stages.filter(statut=Stage.Statut.EN_COURS).first()
+        if stage:
+            return stage
+        return self.stages.filter(statut=Stage.Statut.A_VENIR).order_by('date_debut').first()
 
 
 class ProfilRH(models.Model):
@@ -118,6 +126,10 @@ class Candidature(models.Model):
     poste_souhaite = models.CharField(max_length=200)
     cv = models.FileField(upload_to='candidatures/cv/', blank=True, null=True)
     lettre_motivation = models.FileField(upload_to='candidatures/lm/', blank=True, null=True)
+    piece_identite = models.FileField(
+        upload_to='candidatures/cnib/', blank=True, null=True,
+        help_text="Copie de la CNIB (ou équivalent) du candidat.",
+    )
 
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
     motif_refus = models.TextField(blank=True, help_text="Obligatoire côté formulaire si la candidature est refusée.")
@@ -142,7 +154,7 @@ class Candidature(models.Model):
         return f"{self.nom_complet} — {self.poste_souhaite}"
 
     def refuser(self, motif, traite_par):
-        """Marque la candidature comme refusée avec justification obligatoire."""
+        """Marque la candidature comme refusée avec justification obligatoire, et notifie le candidat par email."""
         if not motif:
             raise ValueError("Un motif de refus est obligatoire.")
         self.statut = self.Statut.REFUSEE
@@ -150,19 +162,21 @@ class Candidature(models.Model):
         self.traite_par = traite_par
         self.date_traitement = timezone.now()
         self.save()
+        self._envoyer_email_refus()
 
     def accepter(self, departement, traite_par, date_debut, date_fin, avec_soutenance=True):
         """
-        Accepte la candidature : crée le compte utilisateur, son profil,
-        et le Stage correspondant. Retourne le User créé (le mot de passe
-        est laissé inutilisable ici — l'envoi du lien d'activation par
-        email est géré côté vue, hors modèle).
+        Accepte la candidature : crée le compte utilisateur (sans mot de
+        passe utilisable), son profil, le Stage correspondant, puis envoie
+        un email avec un lien d'activation à usage unique permettant au
+        stagiaire de définir lui-même son mot de passe.
         """
+        parties_nom = self.nom_complet.strip().split(' ', 1)
         user = User.objects.create_user(
             username=self._generer_username(),
             email=self.email,
-            first_name=self.nom_complet.split(' ')[0],
-            last_name=' '.join(self.nom_complet.split(' ')[1:]) or self.nom_complet,
+            first_name=parties_nom[0],
+            last_name=parties_nom[1] if len(parties_nom) > 1 else '',
             role=User.Role.STAGIAIRE,
         )
         user.set_unusable_password()
@@ -187,7 +201,56 @@ class Candidature(models.Model):
         self.date_traitement = timezone.now()
         self.save()
 
-        return user, stage
+        lien_activation = self._envoyer_email_activation(user)
+
+        return user, stage, lien_activation
+
+    def _envoyer_email_activation(self, user):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        from django.urls import reverse
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        lien_relatif = reverse('appStage:activer_compte', kwargs={'uidb64': uidb64, 'token': token})
+        lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
+
+        send_mail(
+            subject="Votre candidature a été acceptée — BCBStageFlow",
+            message=(
+                f"Bonjour {self.nom_complet},\n\n"
+                f"Votre candidature au poste de {self.poste_souhaite} a été acceptée !\n\n"
+                f"Pour accéder à votre tableau de bord, définissez votre mot de passe "
+                f"en suivant ce lien (valable 48 heures) :\n{lien_complet}\n\n"
+                f"— L'équipe BCBStageFlow"
+            ),
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[self.email],
+            fail_silently=False,
+        )
+        return lien_complet
+
+    def _envoyer_email_refus(self):
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+
+        send_mail(
+            subject="Réponse à votre candidature — BCBStageFlow",
+            message=(
+                f"Bonjour {self.nom_complet},\n\n"
+                f"Nous vous remercions pour votre candidature au poste de {self.poste_souhaite}.\n\n"
+                f"Après étude de votre dossier, nous ne sommes malheureusement pas en mesure "
+                f"d'y donner suite pour le motif suivant :\n\n{self.motif_refus}\n\n"
+                f"Nous vous souhaitons plein succès dans vos démarches.\n\n"
+                f"— L'équipe BCBStageFlow"
+            ),
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[self.email],
+            fail_silently=False,
+        )
 
     def _generer_username(self):
         base = ''.join(self.nom_complet.lower().split())

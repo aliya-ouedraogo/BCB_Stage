@@ -671,6 +671,22 @@
 .feedback-date { font-size: 11.5px; color: var(--color-text-faint); margin-top: 14px; }
 
 /* ---------------------------------------------------------
+   Messages système (succès / erreur)
+   --------------------------------------------------------- */
+.messages-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.app-message {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.app-message a { color: inherit; text-decoration: underline; font-weight: 600; }
+.app-message--success { background: var(--color-success-bg); color: #166534; }
+.app-message--error { background: var(--color-danger-bg); color: var(--color-danger); }
+.app-message--info { background: var(--color-primary-soft); color: var(--color-primary); }
+
+/* ---------------------------------------------------------
    Déconnexion (visible, distincte des autres liens de sidebar)
    --------------------------------------------------------- */
 .logout-form { margin: 0; }
@@ -861,8 +877,49 @@
 .criteria-row-head strong { font-weight: 700; }
 .criteria-slider {
   width: 100%;
-  accent-color: var(--color-primary);
   height: 6px;
+  border-radius: var(--radius-pill);
+  background: #eceef1;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.criteria-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: #eceef1;
+}
+.criteria-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 3px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-primary);
+  margin-top: -6px;
+  cursor: pointer;
+}
+.criteria-slider::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: #eceef1;
+}
+.criteria-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 3px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-primary);
+  cursor: pointer;
+}
+.criteria-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
 }
 
 .char-counter { text-align: right; font-size: 12px; color: var(--color-text-faint); margin-top: 6px; }
@@ -910,6 +967,44 @@
   color: var(--color-danger);
   font-size: 13px;
 }
+/* ---------------------------------------------------------
+   Champs de formulaire (candidatures, évaluation, paramètres...)
+   --------------------------------------------------------- */
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 13px; font-weight: 600; color: var(--color-text); }
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 14.5px;
+  font-family: inherit;
+  color: var(--color-text);
+}
+.form-group input, .form-group select { height: 46px; }
+.form-group textarea { padding: 12px 14px; resize: vertical; min-height: 80px; }
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.form-group .field-error { font-size: 12.5px; color: var(--color-danger); font-weight: 600; }
+.form-errors {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
 .candidature-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr auto;

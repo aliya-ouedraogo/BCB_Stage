@@ -2,16 +2,10 @@
 
 {% block title %}Mon Espace Stagiaire — BCBStageFlow{% endblock %}
 
-{% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;! 👋{% endblock %}
+{% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;! {% endblock %}
 {% block page_subtitle %}<span class="subtitle">Voici un aperçu de la progression de votre stage.</span>{% endblock %}
 
 {% block dashboard_content %}
-
-  {% if messages %}
-    {% for message in messages %}
-      <div class="badge badge-success" style="width:fit-content;">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
 
   {% if not stage %}
     <div class="panel" style="text-align:center; padding:48px 24px;">
@@ -23,6 +17,13 @@
       </p>
     </div>
   {% else %}
+
+  {% if stage.statut == 'A_VENIR' %}
+    <div class="app-message app-message--info" style="margin-bottom:20px;">
+      <i data-lucide="calendar-clock" style="width:15px;height:15px; vertical-align:-2px;"></i>
+      Votre stage débute le <strong>{{ stage.date_debut|date:"d F Y" }}</strong> — en attendant, voici un aperçu de votre futur tableau de bord.
+    </div>
+  {% endif %}
 
   <!-- Ligne 1 : progression du stage + présence -->
   <div class="dash-grid">

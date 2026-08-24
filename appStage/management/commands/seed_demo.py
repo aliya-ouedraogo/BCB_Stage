@@ -50,16 +50,19 @@ class Command(BaseCommand):
             username='adminhr', email='rh@bcbstageflow.test', password='DemoPass123',
             first_name='Admin', last_name='HR', role=User.Role.RH,
         )
-        profil_rh = ProfilRH.objects.create(user=rh_user, service="Recrutement")
+        profil_rh = rh_user.profil_rh  # créé automatiquement par le signal post_save
+        profil_rh.service = "Recrutement"
+        profil_rh.save()
 
         # --- Maître de stage ---
         tuteur_user = User.objects.create_user(
             username='M.Kader', email='kader@bcbstageflow.test', password='DemoPass123',
             first_name='', last_name='M. Kader', role=User.Role.MAITRE_STAGE,
         )
-        profil_tuteur = ProfilMaitreStage.objects.create(
-            user=tuteur_user, poste="Lead Developer", departement_affiliation="Développement Web"
-        )
+        profil_tuteur = tuteur_user.profil_maitre_stage  # créé automatiquement par le signal post_save
+        profil_tuteur.poste = "Lead Developer"
+        profil_tuteur.departement_affiliation = "Développement Web"
+        profil_tuteur.save()
 
         # --- Stagiaires ---
         def creer_stagiaire(username, prenom, nom, filiere, annee):

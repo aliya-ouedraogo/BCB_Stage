@@ -36,8 +36,8 @@
           Se connecter à votre compte
           <i data-lucide="arrow-right"></i>
         </a>
-        <a href="{% url 'appStage:register' %}" class="btn btn-secondary btn-block">
-          Créer un nouveau compte
+        <a href="{% url 'appStage:candidature_publique' %}" class="btn btn-secondary btn-block">
+          Déposer une candidature
         </a>
       </div>
 
@@ -67,4 +67,54 @@
 
   </div>
 </main>
+
+<section class="homepage-section">
+  <div class="homepage-section-inner">
+    <h2 class="homepage-section-title">À qui s'adresse BCBStageFlow ?</h2>
+    <p class="homepage-section-subtitle">Une plateforme unique, trois espaces pensés pour chaque rôle.</p>
+
+    <div class="audience-grid">
+      <div class="audience-card">
+        <span class="audience-icon"><i data-lucide="graduation-cap"></i></span>
+        <h3>Stagiaires</h3>
+        <p>Suivez la progression de votre stage, vos missions, vos documents et votre présence — tout au même endroit.</p>
+      </div>
+      <div class="audience-card">
+        <span class="audience-icon"><i data-lucide="users"></i></span>
+        <h3>Maîtres de Stage</h3>
+        <p>Encadrez vos stagiaires, validez leurs rapports et évaluez leur progression depuis un tableau de bord dédié.</p>
+      </div>
+      <div class="audience-card">
+        <span class="audience-icon"><i data-lucide="shield-check"></i></span>
+        <h3>Ressources Humaines</h3>
+        <p>Traitez les candidatures, affectez les départements et gardez une vue d'ensemble sur tous les stages en cours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="homepage-section homepage-section--alt">
+  <div class="homepage-section-inner">
+    <h2 class="homepage-section-title">Comment ça marche</h2>
+    <p class="homepage-section-subtitle">Du dépôt de candidature à l'accès à votre espace personnel, en 3 étapes.</p>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-number">1</span>
+        <h3>Déposez votre candidature</h3>
+        <p>CV, lettre de motivation et pièce d'identité — aucun compte n'est nécessaire pour postuler.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">2</span>
+        <h3>Le RH étudie votre dossier</h3>
+        <p>Votre candidature est examinée, puis affectée à un département si elle est acceptée.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">3</span>
+        <h3>Accédez à votre espace</h3>
+        <p>Vous recevez un e-mail pour définir votre mot de passe et retrouver votre tableau de bord personnalisé.</p>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -8,7 +8,8 @@ urlpatterns = [
     path('onboarding/', views.onboarding, name='onboarding'),
 
     path('login/', views.ConnexionView.as_view(), name='login'),
-    path('register/', views.register, name='register'),
+    path('candidature/', views.candidature_publique, name='candidature_publique'),
+    path('activer/<str:uidb64>/<str:token>/', views.activer_compte, name='activer_compte'),
     path('logout/', views.deconnexion, name='logout'),
 
     # --- RH ---
