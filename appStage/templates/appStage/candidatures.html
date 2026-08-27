@@ -28,7 +28,7 @@
             Soumise {{ c.date_soumission|timesince }}
           </div>
 
-          <div style="display:flex; gap:14px; margin-top:10px;">
+          <div style="display:flex; gap:14px; margin-top:10px; align-items:center;">
             {% if c.cv %}
               <a href="{{ c.cv.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
                 <i data-lucide="file-text" style="width:14px;height:14px;"></i> CV
@@ -46,6 +46,16 @@
             {% endif %}
             {% if not c.cv and not c.lettre_motivation and not c.piece_identite %}
               <span style="font-size:12.5px; color:var(--color-text-faint);">Aucun document joint</span>
+            {% endif %}
+            <span class="chip">
+              <i data-lucide="{% if c.avec_soutenance_souhaite %}flag{% else %}minus-circle{% endif %}" style="width:12px;height:12px;"></i>
+              {% if c.avec_soutenance_souhaite %}Souhaite une soutenance{% else %}Sans soutenance{% endif %}
+            </span>
+            {% if c.departement_souhaite %}
+              <span class="chip">
+                <i data-lucide="building-2" style="width:12px;height:12px;"></i>
+                Souhaite : {{ c.departement_souhaite.nom }}
+              </span>
             {% endif %}
           </div>
         </div>
@@ -75,7 +85,9 @@
                 <label>Département</label>
                 <select name="departement" required>
                   <option value="">Choisir…</option>
-                  {% for d in departements %}<option value="{{ d.id }}">{{ d.nom }}</option>{% endfor %}
+                  {% for d in departements %}
+                    <option value="{{ d.id }}" {% if c.departement_souhaite_id == d.id %}selected{% endif %}>{{ d.nom }}</option>
+                  {% endfor %}
                 </select>
               </div>
               <div class="form-group">
@@ -89,7 +101,8 @@
               <button type="submit" class="btn btn-primary btn-sm">Confirmer</button>
             </div>
             <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:var(--color-text-muted);">
-              <input type="checkbox" name="avec_soutenance" checked> Stage avec soutenance / rapports / tuteur
+              <input type="checkbox" name="avec_soutenance" {% if c.avec_soutenance_souhaite %}checked{% endif %}> Stage avec soutenance / rapports / tuteur
+              <span style="font-size:11.5px; color:var(--color-text-faint);">(pré-rempli selon la préférence du candidat — modifiable)</span>
             </label>
           </form>
         </div>

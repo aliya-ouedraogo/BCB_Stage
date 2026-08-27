@@ -5,6 +5,11 @@
 {% block page_subtitle %}<span class="subtitle">Tous les stagiaires que vous encadrez, passés et présents.</span>{% endblock %}
 
 {% block dashboard_content %}
+  <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+    <a href="{% url 'appStage:assigner_mission' %}" class="btn btn-primary">
+      <i data-lucide="clipboard-list"></i> Assigner une mission
+    </a>
+  </div>
   <div class="panel">
     {% for stage in stages %}
       <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link">

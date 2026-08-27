@@ -5,6 +5,13 @@
 {% block page_subtitle %}<span class="subtitle">Convention, contrat, rapports et autres documents liés à votre stage.</span>{% endblock %}
 
 {% block dashboard_content %}
+
+  <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+    <a href="{% url 'appStage:soumettre_document' %}" class="btn btn-primary">
+      <i data-lucide="upload"></i> Soumettre un document
+    </a>
+  </div>
+
   {% if not stage %}
     <div class="empty-state">
       <i data-lucide="inbox"></i>
@@ -26,10 +33,14 @@
             <div class="doc-name">{{ doc.nom }}</div>
             <div class="doc-meta">
               {{ doc.get_type_document_display }} &bull; Ajouté {{ doc.date_ajout|timesince }}
+              {% if doc.mission %} &bull; Mission : {{ doc.mission.titre }}{% endif %}
               {% if doc.statut_signature == 'SIGNE' %} &bull; Signé le {{ doc.date_signature|date:"d M Y" }}
               {% elif doc.statut_signature == 'EN_ATTENTE' %} &bull; En attente de signature{% endif %}
             </div>
           </div>
+          {% if doc.ajoute_par_id == user.id %}
+            <a href="{% url 'appStage:modifier_document' doc.id %}" class="btn btn-outline btn-sm"><i data-lucide="pencil"></i> Modifier</a>
+          {% endif %}
           {% if doc.fichier %}
             <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i> Télécharger</a>
           {% endif %}

@@ -1,0 +1,87 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Assigner une Mission — BCBStageFlow{% endblock %}
+{% block page_title %}Assigner une Mission{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Confiez une mission à l'un de vos stagiaires encadrés.</span>{% endblock %}
+
+{% block dashboard_content %}
+
+  {% if not stages_encadres %}
+    <div class="empty-state">
+      <i data-lucide="inbox"></i>
+      <h2>Aucun stagiaire à encadrer pour le moment</h2>
+      <p>Vous n'avez aucun stagiaire actif sous votre encadrement.</p>
+    </div>
+  {% else %}
+
+  <div class="panel task-form-panel">
+    {% if form.non_field_errors %}
+      <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="{{ form.stage.id_for_label }}">{{ form.stage.label }}</label>
+          {{ form.stage }}
+          {% for e in form.stage.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.equipe.id_for_label }}">{{ form.equipe.label }}</label>
+          {{ form.equipe }}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="{{ form.titre.id_for_label }}">{{ form.titre.label }}</label>
+          {{ form.titre }}
+          {% for e in form.titre.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.echeance.id_for_label }}">{{ form.echeance.label }}</label>
+          {{ form.echeance }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>{{ form.fichier.label }}</label>
+        <label class="dropzone" for="{{ form.fichier.id_for_label }}">
+          <i data-lucide="upload-cloud"></i>
+          <strong>Choisissez un fichier ou glissez-le ici</strong>
+          <span>PDF, Word, image — jusqu'à 10 Mo</span>
+        </label>
+        {{ form.fichier }}
+        <span class="dropzone-filename" id="dropzone-filename"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+        {{ form.description }}
+      </div>
+
+      <div class="eval-actions">
+        <a href="{% url 'appStage:mes_stagiaires' %}" class="btn btn-outline">Annuler</a>
+        <button type="submit" class="btn btn-primary"><i data-lucide="send"></i> Assigner la mission</button>
+      </div>
+    </form>
+  </div>
+
+  {% endif %}
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+  var fichierInput = document.getElementById('{{ form.fichier.id_for_label }}');
+  var nomFichier = document.getElementById('dropzone-filename');
+  if (fichierInput) {
+    fichierInput.style.display = 'none';
+    fichierInput.addEventListener('change', function () {
+      nomFichier.textContent = fichierInput.files.length ? fichierInput.files[0].name : '';
+    });
+  }
+</script>
+{% endblock %}

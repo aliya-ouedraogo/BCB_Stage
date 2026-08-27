@@ -13,10 +13,10 @@
 
     <section class="auth-showcase" aria-hidden="true">
       <div class="auth-brand">
-        <span class="brand-mark"><i data-lucide="layout-grid"></i></span>
+        <span class="brand-mark"><img src="{% static 'appStage/img/logo-bcb.png' %}" alt="BCB" class="brand-logo-img"></span>
         BCBStageFlow
       </div>
-      <div class="auth-visual"></div>
+      <div class="auth-visual"><img src="{% static 'appStage/img/bcb-siege.png' %}" alt="Siège de la BCB" class="auth-visual-img"></div>
       <div class="auth-copy">
         <h2>Postulez à un stage.</h2>
         <p>Envoyez votre candidature avec vos documents — notre équipe RH l'examinera et vous recontactera par e-mail.</p>
@@ -61,6 +61,12 @@
         </div>
 
         <div class="form-group">
+          <label for="{{ form.departement_souhaite.id_for_label }}">{{ form.departement_souhaite.label }}</label>
+          {{ form.departement_souhaite }}
+          <span class="form-hint">Facultatif — le RH pourra ajuster votre affectation finale.</span>
+        </div>
+
+        <div class="form-group">
           <label for="{{ form.cv.id_for_label }}">{{ form.cv.label }}</label>
           {{ form.cv }}
           <span class="form-hint">Format PDF de préférence.</span>
@@ -76,6 +82,11 @@
           {{ form.piece_identite }}
           <span class="form-hint">CNIB, passeport ou équivalent.</span>
         </div>
+
+        <label style="display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:var(--color-text-muted); cursor:pointer;">
+          {{ form.avec_soutenance_souhaite }}
+          <span>{{ form.avec_soutenance_souhaite.label }}</span>
+        </label>
 
         <button type="submit" class="btn btn-primary btn-block">
           Envoyer ma candidature

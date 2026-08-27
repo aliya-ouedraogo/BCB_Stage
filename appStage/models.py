@@ -130,6 +130,14 @@ class Candidature(models.Model):
         upload_to='candidatures/cnib/', blank=True, null=True,
         help_text="Copie de la CNIB (ou équivalent) du candidat.",
     )
+    avec_soutenance_souhaite = models.BooleanField(
+        default=True,
+        help_text="Préférence exprimée par le candidat — le RH la confirme ou l'ajuste à l'acceptation.",
+    )
+    departement_souhaite = models.ForeignKey(
+        Departement, on_delete=models.SET_NULL, null=True, blank=True, related_name='candidatures_souhaitees',
+        help_text="Département choisi par le candidat — le RH le confirme ou l'ajuste à l'acceptation.",
+    )
 
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
     motif_refus = models.TextField(blank=True, help_text="Obligatoire côté formulaire si la candidature est refusée.")
@@ -422,6 +430,10 @@ class Mission(models.Model):
     equipe = models.CharField(max_length=150, blank=True)
     description = models.TextField(blank=True)
     echeance = models.DateField(null=True, blank=True)
+    fichier = models.FileField(
+        upload_to='missions/', blank=True, null=True,
+        help_text="Document de support ou consigne détaillée (optionnel).",
+    )
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.A_FAIRE)
 
     class Meta:
@@ -497,6 +509,10 @@ class DocumentStage(models.Model):
         SIGNE = 'SIGNE', 'Signé'
 
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='documents')
+    mission = models.ForeignKey(
+        'Mission', on_delete=models.SET_NULL, null=True, blank=True, related_name='documents',
+        help_text="Mission à laquelle ce document se rapporte (livrable), le cas échéant.",
+    )
     nom = models.CharField(max_length=200)
     fichier = models.FileField(upload_to='documents_stage/', blank=True, null=True)
     type_document = models.CharField(max_length=15, choices=TypeDocument.choices, default=TypeDocument.AUTRE)

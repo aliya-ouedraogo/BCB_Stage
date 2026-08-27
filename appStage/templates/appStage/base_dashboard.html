@@ -13,7 +13,7 @@
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="brand">
-        <span class="brand-icon"><i data-lucide="layout-grid"></i></span>
+        <span class="brand-icon"><img src="{% static 'appStage/img/logo-bcb.png' %}" alt="BCB" class="brand-logo-img"></span>
         <div class="brand-text">
           <span class="brand-name">BCBStageFlow</span>
           <span class="brand-sub">Management Portal</span>
@@ -41,12 +41,6 @@
       </div>
 
       <div class="topbar-actions">
-        <button class="icon-btn is-disabled" aria-label="Recherche (bientôt disponible)" title="Bientôt disponible" disabled>
-          <i data-lucide="search"></i>
-        </button>
-        <button class="icon-btn is-disabled" aria-label="Notifications (bientôt disponible)" title="Bientôt disponible" disabled>
-          <i data-lucide="bell"></i>
-        </button>
         <a href="{% url 'appStage:parametres' %}" class="topbar-user">
           <span class="user-avatar">
             {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">

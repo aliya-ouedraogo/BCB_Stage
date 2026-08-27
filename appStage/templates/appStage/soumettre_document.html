@@ -1,0 +1,74 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}{% if document %}Modifier un Document{% else %}Soumettre un Document{% endif %} — BCBStageFlow{% endblock %}
+{% block page_title %}{% if document %}Modifier le Document{% else %}Soumettre un Document{% endif %}{% endblock %}
+{% block page_subtitle %}<span class="subtitle">{% if document %}Remplacez le fichier ou mettez à jour les informations.{% else %}Envoyez un rapport ou tout autre document à votre maître de stage.{% endif %}</span>{% endblock %}
+
+{% block dashboard_content %}
+
+  <div class="panel task-form-panel" style="max-width:600px;">
+    {% if form.non_field_errors %}
+      <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+        {{ form.nom }}
+        {% for e in form.nom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.type_document.id_for_label }}">{{ form.type_document.label }}</label>
+        {{ form.type_document }}
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.mission.id_for_label }}">{{ form.mission.label }}</label>
+        {{ form.mission }}
+        <span class="form-hint">Si vous choisissez une mission en cours, elle sera automatiquement marquée terminée.</span>
+      </div>
+
+      <div class="form-group">
+        <label>{{ form.fichier.label }}</label>
+        {% if document and document.fichier %}
+          <p style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:6px;">
+            Fichier actuel : <strong>{{ document.fichier.name|slice:"18:" }}</strong> — choisissez un nouveau fichier ci-dessous pour le remplacer.
+          </p>
+        {% endif %}
+        <label class="dropzone" for="{{ form.fichier.id_for_label }}">
+          <i data-lucide="upload-cloud"></i>
+          <strong>Choisissez un fichier ou glissez-le ici</strong>
+          <span>PDF, Word — jusqu'à 10 Mo</span>
+        </label>
+        {{ form.fichier }}
+        <span class="dropzone-filename" id="dropzone-filename"></span>
+        {% for e in form.fichier.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+
+      <div class="eval-actions">
+        <a href="{% url 'appStage:mes_documents' %}" class="btn btn-outline">Annuler</a>
+        <button type="submit" class="btn btn-primary">
+          <i data-lucide="{% if document %}save{% else %}send{% endif %}"></i>
+          {% if document %}Enregistrer les modifications{% else %}Envoyer au maître de stage{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+  var fichierInput = document.getElementById('{{ form.fichier.id_for_label }}');
+  var nomFichier = document.getElementById('dropzone-filename');
+  if (fichierInput) {
+    fichierInput.style.display = 'none';
+    fichierInput.addEventListener('change', function () {
+      nomFichier.textContent = fichierInput.files.length ? fichierInput.files[0].name : '';
+    });
+  }
+</script>
+{% endblock %}

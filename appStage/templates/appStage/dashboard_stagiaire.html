@@ -25,6 +25,17 @@
     </div>
   {% endif %}
 
+  {% if not stage.maitre_de_stage %}
+    <a href="{% url 'appStage:choisir_tuteur' %}" class="cta-banner" style="margin-bottom:20px;">
+      <span class="cta-banner-icon"><i data-lucide="user-plus"></i></span>
+      <div class="cta-banner-text">
+        <strong>Aucun maître de stage assigné</strong>
+        <span>Choisissez un tuteur pour être accompagné(e) pendant votre stage.</span>
+      </div>
+      <i data-lucide="arrow-right" class="cta-banner-arrow"></i>
+    </a>
+  {% endif %}
+
   <!-- Ligne 1 : progression du stage + présence -->
   <div class="dash-grid">
     <div class="dash-col">
@@ -58,9 +69,6 @@
 
         <div class="week-row">
           <span>Semaine {{ stage.semaines_ecoulees }} sur {{ stage.duree_totale_semaines }}</span>
-          {% if not stage.maitre_de_stage %}
-            <a href="{% url 'appStage:choisir_tuteur' %}">Choisir un maître de stage</a>
-          {% endif %}
         </div>
         <div class="progress-bar" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
       </div>
@@ -127,13 +135,17 @@
           {% endif %}
         </div>
 
-        <form method="post" action="{% url 'appStage:avancer_mission' mission_actuelle.id %}">
-          {% csrf_token %}
-          <input type="hidden" name="retour" value="{% url 'appStage:dashboard_stagiaire' %}">
-          <button type="submit" class="btn btn-primary btn-block">
-            {% if mission_actuelle.statut == 'A_FAIRE' %}Démarrer cette mission{% else %}Marquer comme terminée{% endif %}
-          </button>
-        </form>
+        {% if mission_actuelle.statut == 'A_FAIRE' %}
+          <form method="post" action="{% url 'appStage:avancer_mission' mission_actuelle.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="retour" value="{% url 'appStage:dashboard_stagiaire' %}">
+            <button type="submit" class="btn btn-primary btn-block">Démarrer cette mission</button>
+          </form>
+        {% else %}
+          <a href="{% url 'appStage:soumettre_document' %}?mission={{ mission_actuelle.id }}" class="btn btn-primary btn-block">
+            <i data-lucide="upload"></i> Soumettre le livrable
+          </a>
+        {% endif %}
       {% else %}
         <p style="color:var(--color-text-muted); font-size:14px;">Aucune mission assignée pour le moment.</p>
       {% endif %}

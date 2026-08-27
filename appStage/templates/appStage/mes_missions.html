@@ -33,14 +33,23 @@
           {% else %}
             <span class="badge badge-info">À faire</span>
           {% endif %}
-          {% if mission.statut != 'TERMINEE' %}
+          {% if mission.statut == 'A_FAIRE' %}
             <form method="post" action="{% url 'appStage:avancer_mission' mission.id %}" style="margin-left:10px;">
               {% csrf_token %}
               <input type="hidden" name="retour" value="{% url 'appStage:mes_missions' %}">
-              <button type="submit" class="btn btn-outline btn-sm">
-                {% if mission.statut == 'A_FAIRE' %}Démarrer{% else %}Marquer terminée{% endif %}
-              </button>
+              <button type="submit" class="btn btn-outline btn-sm">Démarrer</button>
             </form>
+          {% elif mission.statut == 'EN_COURS' %}
+            <div style="display:flex; gap:8px; margin-left:10px;">
+              <a href="{% url 'appStage:soumettre_document' %}?mission={{ mission.id }}" class="btn btn-primary btn-sm">
+                <i data-lucide="upload"></i> Soumettre le livrable
+              </a>
+              <form method="post" action="{% url 'appStage:avancer_mission' mission.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="retour" value="{% url 'appStage:mes_missions' %}">
+                <button type="submit" class="btn btn-outline btn-sm">Marquer terminée</button>
+              </form>
+            </div>
           {% endif %}
         </div>
       {% empty %}

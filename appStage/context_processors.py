@@ -13,11 +13,14 @@ def nav_items(request):
             {'label': 'Tableau de bord', 'icon': 'layout-dashboard', 'url_name': 'appStage:dashboard_stagiaire'},
             {'label': 'Mes Missions', 'icon': 'target', 'url_name': 'appStage:mes_missions'},
             {'label': 'Mes Documents', 'icon': 'file-text', 'url_name': 'appStage:mes_documents'},
+            {'label': 'Mon Tuteur', 'icon': 'user-check', 'url_name': 'appStage:choisir_tuteur'},
             {'label': 'Paramètres', 'icon': 'settings', 'url_name': 'appStage:parametres'},
         ],
         'MAITRE_STAGE': [
             {'label': 'Tableau de bord', 'icon': 'layout-dashboard', 'url_name': 'appStage:dashboard_tuteur'},
             {'label': 'Mes Stagiaires', 'icon': 'users', 'url_name': 'appStage:mes_stagiaires'},
+            {'label': 'Documents Reçus', 'icon': 'inbox', 'url_name': 'appStage:documents_recus'},
+            {'label': 'Assigner une Mission', 'icon': 'clipboard-list', 'url_name': 'appStage:assigner_mission'},
             {'label': 'Paramètres', 'icon': 'settings', 'url_name': 'appStage:parametres'},
         ],
         'RH': [

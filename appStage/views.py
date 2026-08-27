@@ -17,7 +17,16 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from .decorators import role_required
-from .forms import AccepterCandidatureForm, CandidaturePubliqueForm, EvaluationForm, ParametresForm, RefuserCandidatureForm
+from .forms import (
+    AccepterCandidatureForm,
+    AssignerMissionForm,
+    CandidaturePubliqueForm,
+    ChangerMotDePasseForm,
+    EvaluationForm,
+    ParametresForm,
+    RefuserCandidatureForm,
+    SoumettreDocumentForm,
+)
 from .models import (
     Candidature,
     Departement,
@@ -273,11 +282,50 @@ def dashboard_tuteur(request):
 
 
 @role_required(User.Role.MAITRE_STAGE)
+def documents_recus(request):
+    profil = request.user.profil_maitre_stage
+    stages = Stage.objects.filter(maitre_de_stage=profil) \
+        .select_related('stagiaire__user') \
+        .prefetch_related('documents') \
+        .order_by('-date_debut')
+
+    # Uniquement les documents envoyés par le stagiaire lui-même
+    # (les conventions/contrats déposés par le RH n'ont pas leur place ici).
+    stages_avec_docs = []
+    for stage in stages:
+        docs = [d for d in stage.documents.all() if d.ajoute_par_id == stage.stagiaire.user_id]
+        stages_avec_docs.append({'stage': stage, 'documents': docs})
+
+    return render(request, 'appStage/documents_recus.html', {'stages_avec_docs': stages_avec_docs})
+
+
+@role_required(User.Role.MAITRE_STAGE)
 def mes_stagiaires(request):
     profil = request.user.profil_maitre_stage
     stages = Stage.objects.filter(maitre_de_stage=profil) \
         .select_related('stagiaire__user', 'departement').order_by('-date_debut')
     return render(request, 'appStage/mes_stagiaires.html', {'stages': stages})
+
+
+@role_required(User.Role.MAITRE_STAGE)
+def assigner_mission(request):
+    profil = request.user.profil_maitre_stage
+    stages_encadres = Stage.objects.filter(maitre_de_stage=profil, statut=Stage.Statut.EN_COURS) \
+        .select_related('stagiaire__user')
+
+    if request.method == 'POST':
+        form = AssignerMissionForm(request.POST, request.FILES)
+        form.fields['stage'].queryset = stages_encadres
+        if form.is_valid():
+            mission = form.save()
+            messages.success(request, f"Mission « {mission.titre} » assignée à {mission.stage.stagiaire.user.get_full_name()}.")
+            return redirect('appStage:assigner_mission')
+    else:
+        stage_id_prerempli = request.GET.get('stage')
+        form = AssignerMissionForm(initial={'stage': stage_id_prerempli} if stage_id_prerempli else None)
+        form.fields['stage'].queryset = stages_encadres
+
+    return render(request, 'appStage/assigner_mission.html', {'form': form, 'stages_encadres': stages_encadres})
 
 
 def _get_stage_ou_403(request, stage_id):
@@ -390,6 +438,59 @@ def mes_documents(request):
 
 
 @role_required(User.Role.STAGIAIRE)
+def soumettre_document(request):
+    stage = request.user.profil_stagiaire.stage_actif
+    if not stage:
+        messages.error(request, "Vous devez avoir un stage actif pour soumettre un document.")
+        return redirect('appStage:mes_documents')
+
+    if request.method == 'POST':
+        form = SoumettreDocumentForm(request.POST, request.FILES, stage=stage)
+        if form.is_valid():
+            doc = form.save(commit=False)
+            doc.stage = stage
+            doc.ajoute_par = request.user
+            doc.save()
+
+            if doc.mission and doc.mission.statut != Mission.Statut.TERMINEE:
+                doc.mission.statut = Mission.Statut.TERMINEE
+                doc.mission.save(update_fields=['statut'])
+                messages.success(
+                    request,
+                    f"Document « {doc.nom} » envoyé — la mission « {doc.mission.titre} » a été marquée terminée.",
+                )
+            else:
+                messages.success(request, f"Document « {doc.nom} » envoyé à votre maître de stage.")
+            return redirect('appStage:mes_documents')
+    else:
+        mission_id_prerempli = request.GET.get('mission')
+        form = SoumettreDocumentForm(stage=stage, initial={'mission': mission_id_prerempli} if mission_id_prerempli else None)
+
+    return render(request, 'appStage/soumettre_document.html', {'form': form, 'stage': stage})
+
+
+@role_required(User.Role.STAGIAIRE)
+def modifier_document(request, document_id):
+    """Permet au stagiaire de remplacer un document qu'il a lui-même envoyé (pas les documents émis par le RH)."""
+    document = get_object_or_404(
+        DocumentStage, pk=document_id, ajoute_par=request.user, stage__stagiaire=request.user.profil_stagiaire,
+    )
+
+    if request.method == 'POST':
+        form = SoumettreDocumentForm(request.POST, request.FILES, instance=document, stage=document.stage)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Document « {document.nom} » mis à jour.")
+            return redirect('appStage:mes_documents')
+    else:
+        form = SoumettreDocumentForm(instance=document, stage=document.stage)
+
+    return render(request, 'appStage/soumettre_document.html', {
+        'form': form, 'stage': document.stage, 'document': document,
+    })
+
+
+@role_required(User.Role.STAGIAIRE)
 def choisir_tuteur(request):
     stage = request.user.profil_stagiaire.stage_actif
     tuteurs = ProfilMaitreStage.objects.select_related('user').all()
@@ -445,13 +546,24 @@ def avancer_mission(request, mission_id):
 
 @role_required(User.Role.STAGIAIRE, User.Role.RH, User.Role.MAITRE_STAGE)
 def parametres(request):
-    if request.method == 'POST':
-        form = ParametresForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
-            form.save()
+    if request.method == 'POST' and request.POST.get('form_type') == 'securite':
+        securite_form = ChangerMotDePasseForm(request.user, request.POST)
+        if securite_form.is_valid():
+            from django.contrib.auth import update_session_auth_hash
+            user = securite_form.save()
+            update_session_auth_hash(request, user)  # évite d'être déconnecté après le changement
+            messages.success(request, "Votre mot de passe a été mis à jour.")
+            return redirect('appStage:parametres')
+        profil_form = ParametresForm(instance=request.user)
+    elif request.method == 'POST':
+        profil_form = ParametresForm(request.POST, request.FILES, instance=request.user)
+        securite_form = ChangerMotDePasseForm(request.user)
+        if profil_form.is_valid():
+            profil_form.save()
             messages.success(request, "Vos informations ont été mises à jour.")
             return redirect('appStage:parametres')
     else:
-        form = ParametresForm(instance=request.user)
+        profil_form = ParametresForm(instance=request.user)
+        securite_form = ChangerMotDePasseForm(request.user)
 
-    return render(request, 'appStage/parametres.html', {'form': form})
+    return render(request, 'appStage/parametres.html', {'form': profil_form, 'securite_form': securite_form})

@@ -35,15 +35,17 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 16px;
   flex-shrink: 0;
+  overflow: hidden;
 }
 .brand-icon [data-lucide] { width: 20px; height: 20px; }
+.brand-logo-img { width: 100%; height: 100%; object-fit: cover; }
 
 .brand-text { display: flex; flex-direction: column; line-height: 1.25; }
 .brand-name { font-size: 16px; font-weight: 700; }
@@ -671,6 +673,37 @@
 .feedback-date { font-size: 11.5px; color: var(--color-text-faint); margin-top: 14px; }
 
 /* ---------------------------------------------------------
+   Bannière d'appel à l'action (ex: choisir un tuteur)
+   --------------------------------------------------------- */
+.cta-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--color-ink);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.cta-banner:hover { background: #1a1a2b; }
+.cta-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cta-banner-icon [data-lucide] { width: 18px; height: 18px; }
+.cta-banner-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.cta-banner-text strong { font-size: 14.5px; }
+.cta-banner-text span { font-size: 12.5px; color: #b7b8c4; }
+.cta-banner-arrow { width: 18px; height: 18px; flex-shrink: 0; color: #b7b8c4; }
+
+/* ---------------------------------------------------------
    Messages système (succès / erreur)
    --------------------------------------------------------- */
 .messages-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
@@ -1029,6 +1062,124 @@
 .empty-state p { font-size: 14px; margin-top: 6px; max-width: 360px; margin-left: auto; margin-right: auto; }
 
 /* ---------------------------------------------------------
+   Formulaires "tâche" (Assigner Mission / Soumettre Document)
+   --------------------------------------------------------- */
+.task-form-panel { max-width: 720px; }
+.task-form-panel .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.task-form-panel .form-group { margin-bottom: 16px; }
+.task-form-panel .form-group:last-of-type { margin-bottom: 0; }
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 20px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: #fafafa;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dropzone:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.dropzone [data-lucide] { width: 26px; height: 26px; color: var(--color-text-faint); margin-bottom: 4px; }
+.dropzone strong { font-size: 13.5px; font-weight: 600; }
+.dropzone span { font-size: 12px; color: var(--color-text-faint); }
+.dropzone-filename { display: block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--color-primary); }
+.settings-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.settings-tabs {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 24px;
+}
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.settings-tab [data-lucide] { width: 17px; height: 17px; }
+.settings-tab:hover { background: #f5f5f7; color: var(--color-text); }
+.settings-tab.active { background: var(--color-primary); color: #fff; }
+
+.settings-panel { display: none; }
+.settings-panel.active { display: block; }
+
+.settings-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--color-border);
+}
+.settings-avatar-wrap { position: relative; flex-shrink: 0; }
+.settings-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 22px;
+}
+.settings-avatar--placeholder { }
+.settings-avatar-edit {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--color-surface);
+  cursor: pointer;
+}
+.settings-avatar-edit [data-lucide] { width: 13px; height: 13px; }
+.settings-avatar-row .form-group { display: none; } /* input file natif caché, déclenché par le crayon */
+
+.input-icon-wrap { position: relative; display: flex; align-items: center; }
+.input-icon-wrap [data-lucide] {
+  position: absolute;
+  left: 14px;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+.input-icon-wrap input { padding-left: 40px; width: 100%; }
+
+/* ---------------------------------------------------------
    Responsive
    --------------------------------------------------------- */
 @media (max-width: 1180px) {
@@ -1057,6 +1208,9 @@
   .fiche-header { flex-direction: column; align-items: flex-start; }
   .score-donut-wrap { flex-direction: column; align-items: stretch; }
   .candidature-form-row { grid-template-columns: 1fr; }
+
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-tabs { flex-direction: row; overflow-x: auto; position: static; }
 }
 
 @media (max-width: 480px) {

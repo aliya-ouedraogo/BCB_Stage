@@ -22,6 +22,8 @@ urlpatterns = [
     # --- Maître de stage ---
     path('tuteur/', views.dashboard_tuteur, name='dashboard_tuteur'),
     path('tuteur/mes-stagiaires/', views.mes_stagiaires, name='mes_stagiaires'),
+    path('tuteur/documents-recus/', views.documents_recus, name='documents_recus'),
+    path('tuteur/assigner-mission/', views.assigner_mission, name='assigner_mission'),
     path('tuteur/evaluer/<int:stage_id>/', views.evaluer, name='evaluer'),
     path('tuteur/demande/<int:demande_id>/<str:reponse>/', views.repondre_demande_encadrement, name='repondre_demande_encadrement'),
 
@@ -32,6 +34,8 @@ urlpatterns = [
     path('stagiaire/', views.dashboard_stagiaire, name='dashboard_stagiaire'),
     path('stagiaire/missions/', views.mes_missions, name='mes_missions'),
     path('stagiaire/documents/', views.mes_documents, name='mes_documents'),
+    path('stagiaire/documents/soumettre/', views.soumettre_document, name='soumettre_document'),
+    path('stagiaire/documents/<int:document_id>/modifier/', views.modifier_document, name='modifier_document'),
     path('stagiaire/choisir-tuteur/', views.choisir_tuteur, name='choisir_tuteur'),
     path('stagiaire/pointer/', views.pointer_presence, name='pointer_presence'),
     path('stagiaire/mission/<int:mission_id>/avancer/', views.avancer_mission, name='avancer_mission'),
