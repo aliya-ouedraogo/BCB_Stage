@@ -1,6 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Documents Reçus — BCBStageFlow{% endblock %}
+{% block title %}Documents Reçus - BCBStageFlow{% endblock %}
 {% block page_title %}Documents Reçus{% endblock %}
 {% block page_subtitle %}<span class="subtitle">Les documents envoyés par vos stagiaires, regroupés par personne.</span>{% endblock %}
 
@@ -34,6 +34,15 @@
             <div class="doc-name">{{ doc.nom }}</div>
             <div class="doc-meta">{{ doc.get_type_document_display }} &bull; Envoyé {{ doc.date_ajout|timesince }}</div>
           </div>
+          {% if doc.statut_signature == 'SIGNE' %}
+            <span class="badge badge-success">Signé</span>
+          {% elif doc.statut_signature == 'EN_ATTENTE' %}
+            <form method="post" action="{% url 'appStage:signer_document' doc.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'appStage:documents_recus' %}">
+              <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="pen-line"></i> Marquer comme signé</button>
+            </form>
+          {% endif %}
           {% if doc.fichier %}
             <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i> Télécharger</a>
           {% endif %}

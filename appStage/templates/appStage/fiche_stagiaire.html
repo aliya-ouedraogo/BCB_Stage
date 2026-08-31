@@ -1,6 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}{{ stage.stagiaire.user.get_full_name }} — BCBStageFlow{% endblock %}
+{% block title %}{{ stage.stagiaire.user.get_full_name }} - BCBStageFlow{% endblock %}
 
 {% block page_css %}
 <style>
@@ -11,7 +11,7 @@
 
 {% block dashboard_content %}
 
-  <a href="javascript:history.back()" class="link-arrow" style="margin-bottom:16px;">
+  <a href="javascript:history.back()" class="btn-back">
     <i data-lucide="arrow-left"></i> Retour
   </a>
 
@@ -36,6 +36,9 @@
       {% if peut_evaluer %}
         <a href="{% url 'appStage:evaluer' stage.id %}" class="btn btn-primary"><i data-lucide="star"></i> Évaluer ce stagiaire</a>
       {% endif %}
+      {% if peut_envoyer_document %}
+        <a href="{% url 'appStage:envoyer_document_rh' stage.id %}" class="btn btn-primary"><i data-lucide="send"></i> Envoyer un document</a>
+      {% endif %}
     </div>
   </div>
 
@@ -44,12 +47,12 @@
       <div class="panel">
         <h2 class="panel-title">Informations Clés</h2>
         <dl class="info-grid">
-          <div><dt>Département</dt><dd>{{ stage.departement.nom }}</dd></div>
-          <div><dt>Dates</dt><dd>{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</dd></div>
-          <div><dt>Filière</dt><dd>{{ stage.stagiaire.filiere|default:"—" }}</dd></div>
-          <div><dt>Année</dt><dd>{{ stage.stagiaire.annee_etude|default:"—" }}</dd></div>
-          <div><dt>Maître de stage</dt><dd>{{ stage.maitre_de_stage.user.get_full_name|default:"Non assigné" }}</dd></div>
-          <div><dt>Soutenance / Rapports</dt><dd>{% if stage.avec_soutenance %}Oui{% else %}Non{% endif %}</dd></div>
+          <div><dt><i data-lucide="building-2"></i> Département</dt><dd>{{ stage.departement.nom }}</dd></div>
+          <div><dt><i data-lucide="calendar"></i> Dates</dt><dd>{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</dd></div>
+          <div><dt><i data-lucide="graduation-cap"></i> Filière</dt><dd>{{ stage.stagiaire.filiere|default:"N/A" }}</dd></div>
+          <div><dt><i data-lucide="hash"></i> Année</dt><dd>{{ stage.stagiaire.annee_etude|default:"N/A" }}</dd></div>
+          <div><dt><i data-lucide="user-check"></i> Maître de stage</dt><dd>{{ stage.maitre_de_stage.user.get_full_name|default:"Non assigné" }}</dd></div>
+          <div><dt><i data-lucide="flag"></i> Soutenance / Rapports</dt><dd>{% if stage.avec_soutenance %}Oui{% else %}Non{% endif %}</dd></div>
         </dl>
       </div>
     </div>
@@ -66,11 +69,11 @@
   </div>
 
   <div class="panel">
-    <div class="detail-tabs" role="tablist">
-      <button class="detail-tab active" data-tab="missions">Missions</button>
-      <button class="detail-tab" data-tab="documents">Documents</button>
-      <button class="detail-tab" data-tab="presence">Présence</button>
-      <button class="detail-tab" data-tab="evaluations">Évaluations</button>
+    <div class="tab-group" role="tablist" style="margin-bottom:20px;">
+      <button class="tab-item active" data-tab="missions"><i data-lucide="git-branch"></i> Missions</button>
+      <button class="tab-item" data-tab="documents"><i data-lucide="file-text"></i> Documents</button>
+      <button class="tab-item" data-tab="presence"><i data-lucide="calendar-check"></i> Présence</button>
+      <button class="tab-item" data-tab="evaluations"><i data-lucide="star"></i> Évaluations</button>
     </div>
 
     <div class="tab-panel active" data-panel="missions">
@@ -106,7 +109,7 @@
 
     <div class="tab-panel" data-panel="presence">
       <p style="font-size:14px; margin-bottom:14px;">
-        Taux de présence : <strong>{{ stage.taux_presence|default:"—" }}%</strong>
+        Taux de présence : <strong>{{ stage.taux_presence|default:"N/A" }}%</strong>
       </p>
       {% for p in presences %}
         <div class="doc-row">
@@ -131,7 +134,7 @@
         <div class="doc-row" style="align-items:flex-start;">
           <span class="doc-icon doc-icon--doc"><i data-lucide="star"></i></span>
           <div class="doc-info" style="flex:1;">
-            <div class="doc-name">{{ ev.get_type_evaluation_display }} — {{ ev.note }}/20</div>
+            <div class="doc-name">{{ ev.get_type_evaluation_display }} • {{ ev.note }}/20</div>
             <div class="doc-meta" style="margin-bottom:6px;">{{ ev.date_evaluation|date:"d M Y" }}</div>
             {% if ev.commentaire %}<p style="font-size:13.5px; color:var(--color-text-muted);">{{ ev.commentaire }}</p>{% endif %}
           </div>
@@ -146,9 +149,9 @@
 
 {% block page_js %}
 <script>
-  document.querySelectorAll('.detail-tab').forEach(function (tab) {
+  document.querySelectorAll('.tab-item[data-tab]').forEach(function (tab) {
     tab.addEventListener('click', function () {
-      document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-item[data-tab]').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       document.querySelector('.tab-panel[data-panel="' + tab.dataset.tab + '"]').classList.add('active');

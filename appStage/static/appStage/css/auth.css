@@ -287,6 +287,33 @@
 .audience-card h3, .step-card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
 .audience-card p, .step-card p { font-size: 13.5px; color: var(--color-text-muted); line-height: 1.6; }
 
+/* ---------- Variante "message" : pages à un seul panneau
+   (confirmation, erreur) — pas de showcase, carte resserrée ---------- */
+.auth-card--message {
+  grid-template-columns: 1fr;
+  max-width: 440px;
+  min-height: 0;
+}
+.auth-card--message .auth-form-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 36px;
+  text-align: center;
+}
+.auth-card--message h1 { font-size: 21px; -webkit-background-clip: unset; background-clip: unset; background: none; color: var(--color-text); }
+.auth-card--message .auth-subtitle { max-width: 34ch; font-size: 13.5px; }
+.auth-card--message .icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.auth-card--message .btn { width: 100%; margin-top: 22px; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   .auth-card {

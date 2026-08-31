@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.http import urlsafe_base64_decode
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.safestring import mark_safe
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
@@ -22,6 +23,7 @@ from .forms import (
     AssignerMissionForm,
     CandidaturePubliqueForm,
     ChangerMotDePasseForm,
+    EnvoyerDocumentRHForm,
     EvaluationForm,
     ParametresForm,
     RefuserCandidatureForm,
@@ -107,7 +109,7 @@ def activer_compte(request, uidb64, token):
         if form.is_valid():
             form.save()
             login(request, user)
-            messages.success(request, "Votre mot de passe est défini — bienvenue sur BCBStageFlow !")
+            messages.success(request, "Votre mot de passe est défini. Bienvenue sur BCBStageFlow !")
             return redirect(user.get_dashboard_url_name())
     else:
         form = SetPasswordForm(user)
@@ -124,6 +126,20 @@ def deconnexion(request):
 # =========================================================
 # Tableau de bord RH
 # =========================================================
+
+NOMS_MOIS_COURTS = [
+    'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin',
+    'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc',
+]
+
+
+def _premier_jour_mois_glissant(date_reference, n_mois_avant):
+    """1er jour du mois situé n_mois_avant avant date_reference (0 = mois courant)."""
+    index_mois_total = date_reference.month - 1 - n_mois_avant
+    annee = date_reference.year + index_mois_total // 12
+    mois = index_mois_total % 12 + 1
+    return datetime.date(annee, mois, 1)
+
 
 @role_required(User.Role.RH)
 def dashboard_rh(request):
@@ -160,6 +176,20 @@ def dashboard_rh(request):
     ).exclude(evaluations__type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS) \
      .select_related('stagiaire__user')
 
+    # --- Graphique : candidatures reçues et nouveaux stagiaires, 6 derniers mois ---
+    mois_glissants = [_premier_jour_mois_glissant(aujourdhui, n) for n in range(5, -1, -1)]
+    chart_data = {
+        'labels': [f"{NOMS_MOIS_COURTS[m.month - 1]} {m.year}" for m in mois_glissants],
+        'candidatures': [
+            Candidature.objects.filter(date_soumission__year=m.year, date_soumission__month=m.month).count()
+            for m in mois_glissants
+        ],
+        'stagiaires': [
+            Stage.objects.filter(date_debut__year=m.year, date_debut__month=m.month).count()
+            for m in mois_glissants
+        ],
+    }
+
     context = {
         'nb_stagiaires_actifs': stagiaires_actifs.count(),
         'nouveaux_stagiaires_ce_mois': nouveaux_stagiaires_ce_mois,
@@ -172,6 +202,8 @@ def dashboard_rh(request):
         'conventions_en_attente': conventions_en_attente[:3],
         'stages_sans_eval': stages_sans_eval[:3],
         'filtre_statut': filtre_statut,
+        'chart_data': chart_data,
+        'annee_courante': aujourdhui.year,
     }
     return render(request, 'appStage/dashboard_rh.html', context)
 
@@ -219,13 +251,13 @@ def accepter_candidature(request, candidature_id):
             messages.success(
                 request,
                 mark_safe(
-                    f"Candidature de {nom_echappe} acceptée — compte créé. "
+                    f"Candidature de {nom_echappe} acceptée, compte créé. "
                     f"<strong>Lien d'activation (visible uniquement en dev)&nbsp;:</strong> "
                     f"<a href=\"{lien_activation}\">{lien_activation}</a>"
                 ),
             )
         else:
-            messages.success(request, f"Candidature de {candidature.nom_complet} acceptée — email envoyé.")
+            messages.success(request, f"Candidature de {candidature.nom_complet} acceptée, email envoyé.")
     else:
         messages.error(request, "Formulaire invalide : " + " ".join(
             f"{champ} : {', '.join(erreurs)}" for champ, erreurs in form.errors.items()
@@ -289,14 +321,84 @@ def documents_recus(request):
         .prefetch_related('documents') \
         .order_by('-date_debut')
 
-    # Uniquement les documents envoyés par le stagiaire lui-même
-    # (les conventions/contrats déposés par le RH n'ont pas leur place ici).
+    # Uniquement les documents que le stagiaire a explicitement adressés au
+    # tuteur (les conventions/contrats déposés par le RH, ou les documents
+    # adressés au RH, n'ont pas leur place ici).
     stages_avec_docs = []
     for stage in stages:
-        docs = [d for d in stage.documents.all() if d.ajoute_par_id == stage.stagiaire.user_id]
+        docs = [d for d in stage.documents.all() if d.destinataire == DocumentStage.Destinataire.TUTEUR]
         stages_avec_docs.append({'stage': stage, 'documents': docs})
 
     return render(request, 'appStage/documents_recus.html', {'stages_avec_docs': stages_avec_docs})
+
+
+@role_required(User.Role.RH)
+def documents_recus_rh(request):
+    """
+    Vue globale (tous stagiaires confondus) des documents adressés au RH,
+    plus un second bloc listant ce que le RH a lui-même envoyé aux
+    stagiaires (conventions, contrats...).
+    """
+    type_filtre = request.GET.get('type', '')
+
+    stages = Stage.objects.select_related('stagiaire__user', 'departement') \
+        .prefetch_related('documents').order_by('-date_debut')
+
+    stages_avec_docs = []
+    stages_avec_envois = []
+    total_documents = 0
+    total_en_attente_signature = 0
+    for stage in stages:
+        tous_docs = list(stage.documents.all())
+        recus = [d for d in tous_docs if d.destinataire == DocumentStage.Destinataire.RH]
+        envoyes = [d for d in tous_docs if d.destinataire == DocumentStage.Destinataire.STAGIAIRE]
+
+        total_documents += len(recus)
+        # "En attente de signature" ne doit compter que ce qui concerne le RH :
+        # les documents qu'il a lui-même envoyés (conventions/contrats) et qui
+        # attendent la signature du stagiaire — pas les documents adressés au tuteur.
+        total_en_attente_signature += sum(
+            1 for d in envoyes if d.statut_signature == DocumentStage.StatutSignature.EN_ATTENTE
+        )
+
+        docs_filtres = [d for d in recus if d.type_document == type_filtre] if type_filtre else recus
+        stages_avec_docs.append({'stage': stage, 'documents': docs_filtres})
+        if envoyes:
+            stages_avec_envois.append({'stage': stage, 'documents': envoyes})
+
+    return render(request, 'appStage/documents_recus_rh.html', {
+        'stages_avec_docs': stages_avec_docs,
+        'stages_avec_envois': stages_avec_envois,
+        'type_filtre': type_filtre,
+        'total_documents': total_documents,
+        'total_en_attente_signature': total_en_attente_signature,
+        'documents_trouves': any(entry['documents'] for entry in stages_avec_docs),
+    })
+
+
+@role_required(User.Role.RH)
+def envoyer_document_rh(request, stage_id):
+    """Le RH envoie un document administratif (convention, contrat...) à un stagiaire."""
+    stage = get_object_or_404(Stage.objects.select_related('stagiaire__user'), pk=stage_id)
+
+    if request.method == 'POST':
+        form = EnvoyerDocumentRHForm(request.POST, request.FILES)
+        if form.is_valid():
+            doc = form.save(commit=False)
+            doc.stage = stage
+            doc.destinataire = DocumentStage.Destinataire.STAGIAIRE
+            doc.ajoute_par = request.user
+            if doc.type_document in (DocumentStage.TypeDocument.CONVENTION, DocumentStage.TypeDocument.CONTRAT):
+                doc.statut_signature = DocumentStage.StatutSignature.EN_ATTENTE
+            doc.save()
+            messages.success(
+                request, f"Document « {doc.nom} » envoyé à {stage.stagiaire.user.get_full_name()}.",
+            )
+            return redirect('appStage:documents_recus_rh')
+    else:
+        form = EnvoyerDocumentRHForm()
+
+    return render(request, 'appStage/envoyer_document_rh.html', {'form': form, 'stage': stage})
 
 
 @role_required(User.Role.MAITRE_STAGE)
@@ -350,6 +452,7 @@ def fiche_stagiaire(request, stage_id):
         'presences': stage.presences.all()[:14],
         'evaluations': stage.evaluations.all(),
         'peut_evaluer': request.user.role == User.Role.MAITRE_STAGE,
+        'peut_envoyer_document': request.user.role == User.Role.RH,
     }
     return render(request, 'appStage/fiche_stagiaire.html', context)
 
@@ -367,9 +470,42 @@ def evaluer(request, stage_id):
             messages.success(request, "Évaluation enregistrée.")
             return redirect('appStage:fiche_stagiaire', stage_id=stage.id)
     else:
-        form = EvaluationForm(initial={'type_evaluation': Evaluation.TypeEvaluation.MI_PARCOURS})
+        # Suggestion intelligente : proche de la fin du stage -> Finale par défaut.
+        type_suggere = (
+            Evaluation.TypeEvaluation.FINALE if stage.semaines_restantes <= 2
+            else Evaluation.TypeEvaluation.MI_PARCOURS
+        )
+        form = EvaluationForm(initial={'type_evaluation': type_suggere})
 
-    return render(request, 'appStage/evaluer.html', {'stage': stage, 'form': form})
+    eval_mi_parcours = stage.evaluations.filter(type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS).first()
+    eval_finale = stage.evaluations.filter(type_evaluation=Evaluation.TypeEvaluation.FINALE).first()
+
+    def _valeurs_evaluation(evaluation):
+        if not evaluation:
+            return None
+        return {
+            'note_technique': evaluation.note_technique,
+            'note_autonomie': evaluation.note_autonomie,
+            'note_communication': evaluation.note_communication,
+            'note_ponctualite': evaluation.note_ponctualite,
+            'commentaire': evaluation.commentaire,
+            'note': str(evaluation.note),
+            'date': evaluation.date_evaluation.strftime('%d %b %Y'),
+        }
+
+    # Permet au formulaire de recharger les notes d'une évaluation déjà
+    # enregistrée quand on bascule sur Mi-parcours / Finale, au lieu
+    # d'afficher un simple message statique inutile.
+    evaluations_existantes = {
+        'MI_PARCOURS': _valeurs_evaluation(eval_mi_parcours),
+        'FINALE': _valeurs_evaluation(eval_finale),
+    }
+
+    return render(request, 'appStage/evaluer.html', {
+        'stage': stage, 'form': form,
+        'eval_mi_parcours': eval_mi_parcours, 'eval_finale': eval_finale,
+        'evaluations_existantes': evaluations_existantes,
+    })
 
 
 @require_POST
@@ -437,6 +573,38 @@ def mes_documents(request):
     return render(request, 'appStage/mes_documents.html', {'stage': stage, 'documents': documents})
 
 
+@require_POST
+@role_required(User.Role.STAGIAIRE, User.Role.MAITRE_STAGE)
+def signer_document(request, document_id):
+    """
+    Le destinataire réel d'un document (le stagiaire s'il lui est adressé,
+    le tuteur si c'est lui) le marque comme signé. C'est la seule façon
+    pour l'app de savoir qu'un accord/contrat envoyé a bien été traité —
+    avant ça, "en attente de signature" ne changeait jamais tout seul.
+    """
+    doc = get_object_or_404(DocumentStage.objects.select_related('stage__stagiaire__user', 'stage__maitre_de_stage__user'), pk=document_id)
+    stage = doc.stage
+
+    est_destinataire = (
+        (doc.destinataire == DocumentStage.Destinataire.STAGIAIRE and stage.stagiaire.user_id == request.user.id) or
+        (doc.destinataire == DocumentStage.Destinataire.TUTEUR and stage.maitre_de_stage_id
+         and stage.maitre_de_stage.user_id == request.user.id)
+    )
+    if not est_destinataire:
+        raise PermissionDenied("Vous n'êtes pas destinataire de ce document.")
+
+    if doc.statut_signature == DocumentStage.StatutSignature.EN_ATTENTE:
+        doc.statut_signature = DocumentStage.StatutSignature.SIGNE
+        doc.date_signature = timezone.now().date()
+        doc.save(update_fields=['statut_signature', 'date_signature'])
+        messages.success(request, f"Document « {doc.nom} » marqué comme signé.")
+
+    page_retour = request.POST.get('next')
+    if page_retour and url_has_allowed_host_and_scheme(page_retour, allowed_hosts={request.get_host()}):
+        return redirect(page_retour)
+    return redirect('appStage:mes_documents' if request.user.role == User.Role.STAGIAIRE else 'appStage:documents_recus')
+
+
 @role_required(User.Role.STAGIAIRE)
 def soumettre_document(request):
     stage = request.user.profil_stagiaire.stage_actif
@@ -457,10 +625,11 @@ def soumettre_document(request):
                 doc.mission.save(update_fields=['statut'])
                 messages.success(
                     request,
-                    f"Document « {doc.nom} » envoyé — la mission « {doc.mission.titre} » a été marquée terminée.",
+                    f"Document « {doc.nom} » envoyé, la mission « {doc.mission.titre} » a été marquée terminée.",
                 )
             else:
-                messages.success(request, f"Document « {doc.nom} » envoyé à votre maître de stage.")
+                destinataire_label = "au RH" if doc.destinataire == DocumentStage.Destinataire.RH else "à votre maître de stage"
+                messages.success(request, f"Document « {doc.nom} » envoyé {destinataire_label}.")
             return redirect('appStage:mes_documents')
     else:
         mission_id_prerempli = request.GET.get('mission')

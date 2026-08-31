@@ -1,10 +1,10 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Évaluer {{ stage.stagiaire.user.get_full_name }} — BCBStageFlow{% endblock %}
+{% block title %}Évaluer {{ stage.stagiaire.user.get_full_name }} - BCBStageFlow{% endblock %}
 
 {% block dashboard_content %}
 
-  <a href="javascript:history.back()" class="link-arrow" style="margin-bottom:16px;">
+  <a href="javascript:history.back()" class="btn-back">
     <i data-lucide="arrow-left"></i> Retour
   </a>
 
@@ -37,18 +37,21 @@
         Type d'évaluation
       </label>
       <div class="segmented" style="margin-top:8px;">
-        <label class="segmented-item {% if form.type_evaluation.value == 'MI_PARCOURS' %}active{% endif %}">
+        <label class="segmented-item {% if form.type_evaluation.value == 'MI_PARCOURS' %}active{% endif %}" data-type="MI_PARCOURS">
           <input type="radio" name="type_evaluation" value="MI_PARCOURS"
                  {% if form.type_evaluation.value == 'MI_PARCOURS' %}checked{% endif %} style="display:none;">
           <i data-lucide="trending-up" style="width:15px;height:15px;"></i> Mi-parcours
         </label>
-        <label class="segmented-item {% if form.type_evaluation.value == 'FINALE' %}active{% endif %}">
+        <label class="segmented-item {% if form.type_evaluation.value == 'FINALE' %}active{% endif %}" data-type="FINALE">
           <input type="radio" name="type_evaluation" value="FINALE"
                  {% if form.type_evaluation.value == 'FINALE' %}checked{% endif %} style="display:none;">
           <i data-lucide="flag" style="width:15px;height:15px;"></i> Finale
         </label>
       </div>
+      <div class="eval-hint" id="eval-hint"></div>
     </div>
+
+    {{ evaluations_existantes|json_script:"evaluations-existantes-data" }}
 
     <h2 class="panel-title">Notation Globale</h2>
     <div class="score-donut-wrap">
@@ -128,17 +131,53 @@
   });
   majScore();
 
-  document.querySelectorAll('.segmented-item').forEach(function (label) {
-    label.addEventListener('click', function () {
-      document.querySelectorAll('.segmented-item').forEach(l => l.classList.remove('active'));
-      label.classList.add('active');
-    });
-  });
-
   var commentaire = document.querySelector('[name="commentaire"]');
   var compteur = document.getElementById('char-count');
   function majCompteur() { compteur.textContent = commentaire.value.length; }
   commentaire.addEventListener('input', majCompteur);
   majCompteur();
+
+  // --- Toggle Mi-parcours / Finale : recharge les notes déjà enregistrées ---
+  var evaluationsExistantes = JSON.parse(document.getElementById('evaluations-existantes-data').textContent);
+  var hintEl = document.getElementById('eval-hint');
+  var LABELS = { MI_PARCOURS: 'Mi-parcours', FINALE: 'Finale' };
+
+  function majHint(type) {
+    var data = evaluationsExistantes[type];
+    var label = LABELS[type];
+
+    if (data) {
+      hintEl.innerHTML =
+        '<span><i data-lucide="info" style="width:13px;height:13px;vertical-align:-2px;"></i> ' +
+        'Une évaluation <strong>' + label + '</strong> existe déjà (' + data.note + '/20, le ' + data.date + ').</span>' +
+        '<button type="button" class="eval-hint-chip" id="charger-existante">' +
+        '<i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Reprendre ces notes</button>';
+
+      document.getElementById('charger-existante').addEventListener('click', function () {
+        document.querySelector('[name="note_technique"]').value = data.note_technique;
+        document.querySelector('[name="note_autonomie"]').value = data.note_autonomie;
+        document.querySelector('[name="note_communication"]').value = data.note_communication;
+        document.querySelector('[name="note_ponctualite"]').value = data.note_ponctualite;
+        commentaire.value = data.commentaire;
+        majScore();
+        majCompteur();
+      });
+    } else {
+      hintEl.innerHTML =
+        '<span>Aucune évaluation <strong>' + label + '</strong> enregistrée pour l\'instant. ' +
+        'Elle sera créée à l\'enregistrement.</span>';
+    }
+    lucide.createIcons();
+  }
+
+  document.querySelectorAll('.segmented-item').forEach(function (label) {
+    label.addEventListener('click', function () {
+      document.querySelectorAll('.segmented-item').forEach(l => l.classList.remove('active'));
+      label.classList.add('active');
+      majHint(label.dataset.type);
+    });
+  });
+
+  majHint(document.querySelector('.segmented-item.active').dataset.type);
 </script>
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends "appStage/base_auth.html" %}
 {% load static %}
 
-{% block title %}Activer mon compte — BCBStageFlow{% endblock %}
+{% block title %}Activer mon compte - BCBStageFlow{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'appStage/css/auth.css' %}">
@@ -16,7 +16,7 @@
         <span class="brand-mark"><img src="{% static 'appStage/img/logo-bcb.png' %}" alt="BCB" class="brand-logo-img"></span>
         BCBStageFlow
       </div>
-      <div class="auth-visual"></div>
+      <div class="auth-visual"><img src="{% static 'appStage/img/bcb-siege.png' %}" alt="Siège de la BCB" class="auth-visual-img"></div>
       <div class="auth-copy">
         <h2>Bienvenue à bord !</h2>
         <p>Votre candidature a été acceptée. Définissez votre mot de passe pour accéder à votre tableau de bord.</p>
@@ -25,7 +25,7 @@
 
     <section class="auth-form-panel">
       <h1>Créer votre mot de passe</h1>
-      <p class="auth-subtitle">Ce lien est à usage unique — votre compte sera activé une fois le mot de passe défini.</p>
+      <p class="auth-subtitle">Ce lien est à usage unique : votre compte sera activé une fois le mot de passe défini.</p>
 
       {% if form.non_field_errors %}
         <div class="form-errors">

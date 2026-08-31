@@ -1,10 +1,14 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}{% if document %}Modifier un Document{% else %}Soumettre un Document{% endif %} - BCBStageFlow{% endblock %}
-{% block page_title %}{% if document %}Modifier le Document{% else %}Soumettre un Document{% endif %}{% endblock %}
-{% block page_subtitle %}<span class="subtitle">{% if document %}Remplacez le fichier ou mettez à jour les informations.{% else %}Envoyez un rapport ou tout autre document à votre maître de stage.{% endif %}</span>{% endblock %}
+{% block title %}Envoyer un Document - RH - BCBStageFlow{% endblock %}
+{% block page_title %}Envoyer un Document{% endblock %}
+{% block page_subtitle %}<span class="subtitle">À {{ stage.stagiaire.user.get_full_name }} • {{ stage.departement.nom }}</span>{% endblock %}
 
 {% block dashboard_content %}
+
+  <a href="{% url 'appStage:documents_recus_rh' %}" class="btn-back">
+    <i data-lucide="arrow-left"></i> Retour
+  </a>
 
   <div class="panel task-form-panel" style="max-width:600px;">
     {% if form.non_field_errors %}
@@ -23,27 +27,11 @@
       <div class="form-group">
         <label for="{{ form.type_document.id_for_label }}">{{ form.type_document.label }}</label>
         {{ form.type_document }}
-      </div>
-
-      <div class="form-group">
-        <label for="{{ form.destinataire.id_for_label }}">{{ form.destinataire.label }}</label>
-        {{ form.destinataire }}
-        <span class="form-hint">Choisissez qui doit recevoir ce document.</span>
-      </div>
-
-      <div class="form-group">
-        <label for="{{ form.mission.id_for_label }}">{{ form.mission.label }}</label>
-        {{ form.mission }}
-        <span class="form-hint">Si vous choisissez une mission en cours, elle sera automatiquement marquée terminée.</span>
+        <span class="form-hint">Un accord de stage ou un contrat sera automatiquement marqué « en attente de signature ».</span>
       </div>
 
       <div class="form-group">
         <label>{{ form.fichier.label }}</label>
-        {% if document and document.fichier %}
-          <p style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:6px;">
-            Fichier actuel : <strong>{{ document.fichier.name|slice:"18:" }}</strong>. Choisissez un nouveau fichier ci-dessous pour le remplacer.
-          </p>
-        {% endif %}
         <label class="dropzone" for="{{ form.fichier.id_for_label }}">
           <i data-lucide="upload-cloud"></i>
           <strong>Choisissez un fichier ou glissez-le ici</strong>
@@ -55,10 +43,9 @@
       </div>
 
       <div class="eval-actions">
-        <a href="{% url 'appStage:mes_documents' %}" class="btn btn-outline">Annuler</a>
+        <a href="{% url 'appStage:documents_recus_rh' %}" class="btn btn-outline">Annuler</a>
         <button type="submit" class="btn btn-primary">
-          <i data-lucide="{% if document %}save{% else %}send{% endif %}"></i>
-          {% if document %}Enregistrer les modifications{% else %}Envoyer le document{% endif %}
+          <i data-lucide="send"></i> Envoyer à {{ stage.stagiaire.user.first_name }}
         </button>
       </div>
     </form>

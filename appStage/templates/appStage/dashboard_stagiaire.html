@@ -1,8 +1,8 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Mon Espace Stagiaire — BCBStageFlow{% endblock %}
+{% block title %}Mon Espace Stagiaire - BCBStageFlow{% endblock %}
 
-{% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;! {% endblock %}
+{% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;:){% endblock %}
 {% block page_subtitle %}<span class="subtitle">Voici un aperçu de la progression de votre stage.</span>{% endblock %}
 
 {% block dashboard_content %}
@@ -21,7 +21,7 @@
   {% if stage.statut == 'A_VENIR' %}
     <div class="app-message app-message--info" style="margin-bottom:20px;">
       <i data-lucide="calendar-clock" style="width:15px;height:15px; vertical-align:-2px;"></i>
-      Votre stage débute le <strong>{{ stage.date_debut|date:"d F Y" }}</strong> — en attendant, voici un aperçu de votre futur tableau de bord.
+      Votre stage débute le <strong>{{ stage.date_debut|date:"d F Y" }}</strong>. En attendant, voici un aperçu de votre futur tableau de bord.
     </div>
   {% endif %}
 
@@ -81,7 +81,7 @@
           <i data-lucide="calendar" style="width:18px;height:18px;color:#b7b8c4;"></i>
         </div>
 
-        <div class="attendance-value">{{ taux_presence|default:"—" }}<span>%</span></div>
+        <div class="attendance-value">{{ taux_presence|default:"N/A" }}<span>%</span></div>
 
         <div class="attendance-stat">
           <span>Jours Présents</span>
@@ -181,14 +181,7 @@
 
     <div class="panel">
       <div class="panel-title-row">
-        <h2 class="panel-title" style="margin-bottom:0;">Retour du Maître de Stage</h2>
-        {% if etoiles_pleines %}
-          <div class="star-row">
-            {% for i in "12345" %}
-              <i data-lucide="star" {% if forloop.counter > etoiles_pleines %}class="star-off"{% endif %}></i>
-            {% endfor %}
-          </div>
-        {% endif %}
+        <h2 class="panel-title" style="margin-bottom:0;">Retour du Tuteur</h2>
       </div>
 
       {% if derniere_evaluation %}

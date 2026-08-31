@@ -1,8 +1,8 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Mes Documents — BCBStageFlow{% endblock %}
+{% block title %}Mes Documents - BCBStageFlow{% endblock %}
 {% block page_title %}Mes Documents{% endblock %}
-{% block page_subtitle %}<span class="subtitle">Convention, contrat, rapports et autres documents liés à votre stage.</span>{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Accord de stage, contrat, rapports et autres documents liés à votre stage.</span>{% endblock %}
 
 {% block dashboard_content %}
 
@@ -40,6 +40,13 @@
           </div>
           {% if doc.ajoute_par_id == user.id %}
             <a href="{% url 'appStage:modifier_document' doc.id %}" class="btn btn-outline btn-sm"><i data-lucide="pencil"></i> Modifier</a>
+          {% endif %}
+          {% if doc.statut_signature == 'EN_ATTENTE' and doc.destinataire == 'STAGIAIRE' %}
+            <form method="post" action="{% url 'appStage:signer_document' doc.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'appStage:mes_documents' %}">
+              <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="pen-line"></i> Marquer comme signé</button>
+            </form>
           {% endif %}
           {% if doc.fichier %}
             <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i> Télécharger</a>

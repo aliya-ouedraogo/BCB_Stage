@@ -1,7 +1,7 @@
 {% extends "appStage/base_auth.html" %}
 {% load static %}
 
-{% block title %}Déposer une candidature — BCBStageFlow{% endblock %}
+{% block title %}Déposer une candidature - BCBStageFlow{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'appStage/css/auth.css' %}">
@@ -19,13 +19,13 @@
       <div class="auth-visual"><img src="{% static 'appStage/img/bcb-siege.png' %}" alt="Siège de la BCB" class="auth-visual-img"></div>
       <div class="auth-copy">
         <h2>Postulez à un stage.</h2>
-        <p>Envoyez votre candidature avec vos documents — notre équipe RH l'examinera et vous recontactera par e-mail.</p>
+        <p>Envoyez votre candidature avec vos documents. Notre équipe RH l'examinera et vous recontactera par e-mail.</p>
       </div>
     </section>
 
     <section class="auth-form-panel auth-form-panel--compact">
       <h1>Déposer une candidature</h1>
-      <p class="auth-subtitle">Aucun compte n'est nécessaire pour l'instant — vous en recevrez un par e-mail si votre candidature est acceptée.</p>
+      <p class="auth-subtitle">Aucun compte n'est nécessaire pour l'instant : vous en recevrez un par e-mail si votre candidature est acceptée.</p>
 
       {% if form.non_field_errors %}
         <div class="form-errors">
@@ -63,7 +63,7 @@
         <div class="form-group">
           <label for="{{ form.departement_souhaite.id_for_label }}">{{ form.departement_souhaite.label }}</label>
           {{ form.departement_souhaite }}
-          <span class="form-hint">Facultatif — le RH pourra ajuster votre affectation finale.</span>
+          <span class="form-hint">Facultatif : le RH pourra ajuster votre affectation finale.</span>
         </div>
 
         <div class="form-group">

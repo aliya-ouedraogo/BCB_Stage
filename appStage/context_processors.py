@@ -27,6 +27,7 @@ def nav_items(request):
             {'label': 'Tableau de bord', 'icon': 'layout-dashboard', 'url_name': 'appStage:dashboard_rh'},
             {'label': 'Stagiaires', 'icon': 'users', 'url_name': 'appStage:liste_stagiaires'},
             {'label': 'Candidatures', 'icon': 'user-plus', 'url_name': 'appStage:candidatures'},
+            {'label': 'Documents Reçus', 'icon': 'inbox', 'url_name': 'appStage:documents_recus_rh'},
             {'label': 'Paramètres', 'icon': 'settings', 'url_name': 'appStage:parametres'},
         ],
     }

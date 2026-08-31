@@ -18,6 +18,8 @@ urlpatterns = [
     path('rh/candidatures/', views.candidatures, name='candidatures'),
     path('rh/candidatures/<int:candidature_id>/accepter/', views.accepter_candidature, name='accepter_candidature'),
     path('rh/candidatures/<int:candidature_id>/refuser/', views.refuser_candidature, name='refuser_candidature'),
+    path('rh/documents/', views.documents_recus_rh, name='documents_recus_rh'),
+    path('rh/documents/envoyer/<int:stage_id>/', views.envoyer_document_rh, name='envoyer_document_rh'),
 
     # --- Maître de stage ---
     path('tuteur/', views.dashboard_tuteur, name='dashboard_tuteur'),
@@ -36,6 +38,7 @@ urlpatterns = [
     path('stagiaire/documents/', views.mes_documents, name='mes_documents'),
     path('stagiaire/documents/soumettre/', views.soumettre_document, name='soumettre_document'),
     path('stagiaire/documents/<int:document_id>/modifier/', views.modifier_document, name='modifier_document'),
+    path('documents/<int:document_id>/signer/', views.signer_document, name='signer_document'),
     path('stagiaire/choisir-tuteur/', views.choisir_tuteur, name='choisir_tuteur'),
     path('stagiaire/pointer/', views.pointer_presence, name='pointer_presence'),
     path('stagiaire/mission/<int:mission_id>/avancer/', views.avancer_mission, name='avancer_mission'),

@@ -126,15 +126,17 @@ class SoumettreDocumentForm(forms.ModelForm):
     """
     Le stagiaire ne peut soumettre que des documents de type RAPPORT ou
     AUTRE — CONVENTION/CONTRAT restent des documents administratifs émis
-    par le RH, pas par le stagiaire lui-même.
+    par le RH, pas par le stagiaire lui-même. Il choisit qui doit recevoir
+    le document : son maître de stage ou le RH.
     """
 
     class Meta:
         model = DocumentStage
-        fields = ['nom', 'type_document', 'mission', 'fichier']
+        fields = ['nom', 'type_document', 'destinataire', 'mission', 'fichier']
         labels = {
             'nom': "Nom du document",
             'type_document': "Type",
+            'destinataire': "Destinataire",
             'mission': "Mission concernée",
             'fichier': "Fichier",
         }
@@ -144,6 +146,10 @@ class SoumettreDocumentForm(forms.ModelForm):
         self.fields['type_document'].choices = [
             (val, label) for val, label in DocumentStage.TypeDocument.choices
             if val in (DocumentStage.TypeDocument.RAPPORT, DocumentStage.TypeDocument.AUTRE)
+        ]
+        self.fields['destinataire'].choices = [
+            (val, label) for val, label in DocumentStage.Destinataire.choices
+            if val in (DocumentStage.Destinataire.TUTEUR, DocumentStage.Destinataire.RH)
         ]
         self.fields['mission'].required = False
         self.fields['mission'].empty_label = "Aucune — document indépendant"
@@ -159,3 +165,28 @@ class SoumettreDocumentForm(forms.ModelForm):
             self.fields['mission'].queryset = self.instance.stage.missions.all()
         else:
             self.fields['mission'].queryset = Mission.objects.none()
+
+
+class EnvoyerDocumentRHForm(forms.ModelForm):
+    """Le RH envoie un document administratif (convention, contrat, autre) à un stagiaire donné."""
+
+    class Meta:
+        model = DocumentStage
+        fields = ['nom', 'type_document', 'fichier']
+        labels = {
+            'nom': "Nom du document",
+            'type_document': "Type",
+            'fichier': "Fichier",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['type_document'].choices = [
+            (val, label) for val, label in DocumentStage.TypeDocument.choices
+            if val in (
+                DocumentStage.TypeDocument.CONVENTION,
+                DocumentStage.TypeDocument.CONTRAT,
+                DocumentStage.TypeDocument.AUTRE,
+            )
+        ]
+        self.fields['fichier'].required = True

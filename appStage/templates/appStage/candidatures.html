@@ -1,6 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Candidatures — BCBStageFlow{% endblock %}
+{% block title %}Candidatures - BCBStageFlow{% endblock %}
 {% block page_title %}Candidatures{% endblock %}
 {% block page_subtitle %}<span class="subtitle">Traitez les demandes de stage reçues.</span>{% endblock %}
 
@@ -21,42 +21,45 @@
   {% for c in candidatures %}
     <div class="candidature-card">
       <div class="candidature-head">
-        <div>
-          <div class="person-name">{{ c.nom_complet }}</div>
-          <div class="person-role">{{ c.poste_souhaite }} &bull; {{ c.email }}{% if c.telephone %} &bull; {{ c.telephone }}{% endif %}</div>
-          <div style="font-size:12px; color:var(--color-text-faint); margin-top:4px;">
-            Soumise {{ c.date_soumission|timesince }}
-          </div>
+        <div class="candidature-identity">
+          <span class="avatar">{{ c.nom_complet|first }}</span>
+          <div>
+            <div class="person-name">{{ c.nom_complet }}</div>
+            <div class="person-role">{{ c.poste_souhaite }} &bull; {{ c.email }}{% if c.telephone %} &bull; {{ c.telephone }}{% endif %}</div>
+            <div style="font-size:12px; color:var(--color-text-faint); margin-top:4px;">
+              Soumise {{ c.date_soumission|timesince }}
+            </div>
 
-          <div style="display:flex; gap:14px; margin-top:10px; align-items:center;">
-            {% if c.cv %}
-              <a href="{{ c.cv.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
-                <i data-lucide="file-text" style="width:14px;height:14px;"></i> CV
-              </a>
-            {% endif %}
-            {% if c.lettre_motivation %}
-              <a href="{{ c.lettre_motivation.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
-                <i data-lucide="file" style="width:14px;height:14px;"></i> Lettre de motivation
-              </a>
-            {% endif %}
-            {% if c.piece_identite %}
-              <a href="{{ c.piece_identite.url }}" target="_blank" class="link-arrow" style="font-size:12.5px;">
-                <i data-lucide="badge-check" style="width:14px;height:14px;"></i> CNIB
-              </a>
-            {% endif %}
-            {% if not c.cv and not c.lettre_motivation and not c.piece_identite %}
-              <span style="font-size:12.5px; color:var(--color-text-faint);">Aucun document joint</span>
-            {% endif %}
-            <span class="chip">
-              <i data-lucide="{% if c.avec_soutenance_souhaite %}flag{% else %}minus-circle{% endif %}" style="width:12px;height:12px;"></i>
-              {% if c.avec_soutenance_souhaite %}Souhaite une soutenance{% else %}Sans soutenance{% endif %}
-            </span>
-            {% if c.departement_souhaite %}
+            <div style="display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+              {% if c.cv %}
+                <a href="{{ c.cv.url }}" target="_blank" class="doc-chip">
+                  <i data-lucide="file-text"></i> CV
+                </a>
+              {% endif %}
+              {% if c.lettre_motivation %}
+                <a href="{{ c.lettre_motivation.url }}" target="_blank" class="doc-chip">
+                  <i data-lucide="file"></i> Lettre de motivation
+                </a>
+              {% endif %}
+              {% if c.piece_identite %}
+                <a href="{{ c.piece_identite.url }}" target="_blank" class="doc-chip">
+                  <i data-lucide="badge-check"></i> CNIB
+                </a>
+              {% endif %}
+              {% if not c.cv and not c.lettre_motivation and not c.piece_identite %}
+                <span class="doc-chip-empty">Aucun document joint</span>
+              {% endif %}
               <span class="chip">
-                <i data-lucide="building-2" style="width:12px;height:12px;"></i>
-                Souhaite : {{ c.departement_souhaite.nom }}
+                <i data-lucide="{% if c.avec_soutenance_souhaite %}flag{% else %}minus-circle{% endif %}" style="width:12px;height:12px;"></i>
+                {% if c.avec_soutenance_souhaite %}Souhaite une soutenance{% else %}Sans soutenance{% endif %}
               </span>
-            {% endif %}
+              {% if c.departement_souhaite %}
+                <span class="chip">
+                  <i data-lucide="building-2" style="width:12px;height:12px;"></i>
+                  Souhaite : {{ c.departement_souhaite.nom }}
+                </span>
+              {% endif %}
+            </div>
           </div>
         </div>
 
@@ -102,7 +105,7 @@
             </div>
             <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:var(--color-text-muted);">
               <input type="checkbox" name="avec_soutenance" {% if c.avec_soutenance_souhaite %}checked{% endif %}> Stage avec soutenance / rapports / tuteur
-              <span style="font-size:11.5px; color:var(--color-text-faint);">(pré-rempli selon la préférence du candidat — modifiable)</span>
+              <span style="font-size:11.5px; color:var(--color-text-faint);">(pré-rempli selon la préférence du candidat, modifiable)</span>
             </label>
           </form>
         </div>
@@ -112,7 +115,7 @@
             {% csrf_token %}
             <div class="form-group">
               <label>Motif du refus</label>
-              <textarea name="motif" rows="2" required placeholder="Obligatoire — sera visible par le candidat."></textarea>
+              <textarea name="motif" rows="2" required placeholder="Obligatoire : sera visible par le candidat."></textarea>
             </div>
             <button type="submit" class="btn btn-outline btn-sm" style="margin-top:8px;">Confirmer le refus</button>
           </form>

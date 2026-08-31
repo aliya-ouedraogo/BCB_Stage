@@ -101,7 +101,7 @@ class Departement(models.Model):
         ordering = ['nom']
 
     def __str__(self):
-        return f"{self.nom} — {self.agence}" if self.agence else self.nom
+        return f"{self.nom} • {self.agence}" if self.agence else self.nom
 
 
 # =========================================================
@@ -132,11 +132,11 @@ class Candidature(models.Model):
     )
     avec_soutenance_souhaite = models.BooleanField(
         default=True,
-        help_text="Préférence exprimée par le candidat — le RH la confirme ou l'ajuste à l'acceptation.",
+        help_text="Préférence exprimée par le candidat, que le RH confirme ou ajuste à l'acceptation.",
     )
     departement_souhaite = models.ForeignKey(
         Departement, on_delete=models.SET_NULL, null=True, blank=True, related_name='candidatures_souhaitees',
-        help_text="Département choisi par le candidat — le RH le confirme ou l'ajuste à l'acceptation.",
+        help_text="Département choisi par le candidat, que le RH confirme ou ajuste à l'acceptation.",
     )
 
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
@@ -159,7 +159,7 @@ class Candidature(models.Model):
         ordering = ['-date_soumission']
 
     def __str__(self):
-        return f"{self.nom_complet} — {self.poste_souhaite}"
+        return f"{self.nom_complet} • {self.poste_souhaite}"
 
     def refuser(self, motif, traite_par):
         """Marque la candidature comme refusée avec justification obligatoire, et notifie le candidat par email."""
@@ -227,13 +227,13 @@ class Candidature(models.Model):
         lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
 
         send_mail(
-            subject="Votre candidature a été acceptée — BCBStageFlow",
+            subject="Votre candidature a été acceptée - BCBStageFlow",
             message=(
                 f"Bonjour {self.nom_complet},\n\n"
                 f"Votre candidature au poste de {self.poste_souhaite} a été acceptée !\n\n"
                 f"Pour accéder à votre tableau de bord, définissez votre mot de passe "
                 f"en suivant ce lien (valable 48 heures) :\n{lien_complet}\n\n"
-                f"— L'équipe BCBStageFlow"
+                f"L'équipe BCBStageFlow"
             ),
             from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.email],
@@ -246,14 +246,14 @@ class Candidature(models.Model):
         from django.conf import settings as dj_settings
 
         send_mail(
-            subject="Réponse à votre candidature — BCBStageFlow",
+            subject="Réponse à votre candidature - BCBStageFlow",
             message=(
                 f"Bonjour {self.nom_complet},\n\n"
                 f"Nous vous remercions pour votre candidature au poste de {self.poste_souhaite}.\n\n"
                 f"Après étude de votre dossier, nous ne sommes malheureusement pas en mesure "
                 f"d'y donner suite pour le motif suivant :\n\n{self.motif_refus}\n\n"
                 f"Nous vous souhaitons plein succès dans vos démarches.\n\n"
-                f"— L'équipe BCBStageFlow"
+                f"L'équipe BCBStageFlow"
             ),
             from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.email],
@@ -303,7 +303,7 @@ class Stage(models.Model):
         ordering = ['-date_debut']
 
     def __str__(self):
-        return f"{self.stagiaire} — {self.intitule_poste}"
+        return f"{self.stagiaire} • {self.intitule_poste}"
 
     @property
     def duree_totale_semaines(self):
@@ -385,7 +385,7 @@ class Entretien(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"Entretien {self.date:%d/%m/%Y} — {self.stage}"
+        return f"Entretien {self.date:%d/%m/%Y} • {self.stage}"
 
 
 class Evaluation(models.Model):
@@ -407,10 +407,14 @@ class Evaluation(models.Model):
     date_evaluation = models.DateField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-date_evaluation']
+        # date_evaluation n'a qu'une précision journalière : sans le tri
+        # secondaire sur id, deux évaluations créées le même jour peuvent
+        # apparaître dans un ordre non garanti — et donc afficher la
+        # mauvaise comme "dernière évaluation" au stagiaire.
+        ordering = ['-date_evaluation', '-id']
 
     def __str__(self):
-        return f"Évaluation {self.get_type_evaluation_display()} — {self.stage}"
+        return f"Évaluation {self.get_type_evaluation_display()} • {self.stage}"
 
     @property
     def note(self):
@@ -460,7 +464,7 @@ class RapportHebdomadaire(models.Model):
         ordering = ['-numero_semaine']
 
     def __str__(self):
-        return f"Rapport S{self.numero_semaine} — {self.stage}"
+        return f"Rapport S{self.numero_semaine} • {self.stage}"
 
     def valider(self):
         self.statut = self.Statut.VALIDE
@@ -481,7 +485,7 @@ class Presence(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"{self.stage} — {self.date}"
+        return f"{self.stage} • {self.date}"
 
     def valider(self):
         self.valide_par_tuteur = True
@@ -498,7 +502,7 @@ class DocumentStage(models.Model):
     """
 
     class TypeDocument(models.TextChoices):
-        CONVENTION = 'CONVENTION', 'Convention de stage'
+        CONVENTION = 'CONVENTION', 'Accord de stage'
         CONTRAT = 'CONTRAT', 'Contrat'
         RAPPORT = 'RAPPORT', 'Rapport'
         AUTRE = 'AUTRE', 'Autre'
@@ -508,6 +512,11 @@ class DocumentStage(models.Model):
         EN_ATTENTE = 'EN_ATTENTE', 'En attente de signature'
         SIGNE = 'SIGNE', 'Signé'
 
+    class Destinataire(models.TextChoices):
+        TUTEUR = 'TUTEUR', 'Maître de stage'
+        RH = 'RH', 'RH'
+        STAGIAIRE = 'STAGIAIRE', 'Stagiaire'
+
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='documents')
     mission = models.ForeignKey(
         'Mission', on_delete=models.SET_NULL, null=True, blank=True, related_name='documents',
@@ -516,6 +525,11 @@ class DocumentStage(models.Model):
     nom = models.CharField(max_length=200)
     fichier = models.FileField(upload_to='documents_stage/', blank=True, null=True)
     type_document = models.CharField(max_length=15, choices=TypeDocument.choices, default=TypeDocument.AUTRE)
+    destinataire = models.CharField(
+        max_length=15, choices=Destinataire.choices, default=Destinataire.TUTEUR,
+        help_text="Qui doit voir/traiter ce document : le maître de stage, le RH, ou (documents émis "
+                   "par le RH, ex. contrat) le stagiaire lui-même.",
+    )
     statut_signature = models.CharField(
         max_length=20, choices=StatutSignature.choices, default=StatutSignature.NON_APPLICABLE
     )

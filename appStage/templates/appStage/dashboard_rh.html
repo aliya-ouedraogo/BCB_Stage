@@ -1,6 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Vue d'Ensemble — RH — BCBStageFlow{% endblock %}
+{% block title %}Vue d'Ensemble - RH - BCBStageFlow{% endblock %}
 
 {% block page_title %}Vue d'Ensemble{% endblock %}
 
@@ -27,7 +27,7 @@
 
     <div class="stat-card stat-card--lavender">
       <span class="stat-icon"><i data-lucide="shield-check"></i></span>
-      <span class="stat-label">Conventions</span>
+      <span class="stat-label">Accords de stage</span>
       <div class="stat-value">{{ nb_conventions_signees }}</div>
       <div class="stat-trend"><i data-lucide="briefcase"></i> {{ nb_conventions_en_attente }} en attente</div>
     </div>
@@ -39,6 +39,23 @@
       <div class="stat-trend"><i data-lucide="alert-triangle"></i> Ce mois-ci</div>
     </div>
   </div>
+
+  <!-- Graphique d'activité : candidatures reçues et nouveaux stagiaires -->
+  <div class="panel">
+    <div class="chart-panel-head">
+      <div>
+        <h2 class="panel-title" style="margin-bottom:2px;">Activité des 6 derniers mois</h2>
+        <p class="subtitle" style="margin:0;">Candidatures reçues et nouveaux stagiaires, par mois</p>
+      </div>
+      <div class="chart-legend">
+        <span class="chart-legend-item">Candidatures</span>
+        <span class="chart-legend-item chart-legend-item--alt">Nouveaux stagiaires</span>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap" id="activite-chart"></div>
+  </div>
+
+  {{ chart_data|json_script:"chart-data" }}
 
   <!-- Colonnes : liste stagiaires + panneau latéral -->
   <div class="dash-grid">
@@ -81,15 +98,17 @@
           </p>
         {% endfor %}
 
-        <a href="{% url 'appStage:liste_stagiaires' %}" class="list-cta" style="display:block; text-align:center; text-decoration:none;">Voir tous les stagiaires</a>
+        <a href="{% url 'appStage:liste_stagiaires' %}" class="list-cta">
+          Voir tous les stagiaires <i data-lucide="arrow-right"></i>
+        </a>
       </div>
     </div>
 
     <div class="dash-col">
       <div class="panel panel--dark">
         <span class="announce-icon"><i data-lucide="megaphone"></i></span>
-        <h3>Campagne Été 2024</h3>
-        <p>Il est temps de lancer les recrutements pour les stages d'été. Préparez vos offres.</p>
+        <h3>Campagne de recrutement {{ annee_courante }}</h3>
+        <p>Il est temps de lancer les recrutements pour les prochains stages. Préparez vos offres.</p>
         <a href="{% url 'appStage:candidatures' %}" class="btn btn-primary">Voir les candidatures</a>
       </div>
 
@@ -98,31 +117,112 @@
         <div class="todo-list">
 
           {% for doc in conventions_en_attente %}
-            <div class="todo-item">
+            <a href="{% url 'appStage:documents_recus_rh' %}?type=CONVENTION" class="todo-item">
               <span class="todo-icon todo-icon--danger"><i data-lucide="alert-triangle"></i></span>
               <div class="todo-content">
-                <div class="todo-title">Convention non signée</div>
-                <div class="todo-desc">{{ doc.stage.stagiaire.user.get_full_name }} — {{ doc.stage.departement.nom }}</div>
+                <div class="todo-title">Accord de stage non signé</div>
+                <div class="todo-desc">{{ doc.stage.stagiaire.user.get_full_name }} • {{ doc.stage.departement.nom }}</div>
               </div>
-            </div>
+            </a>
           {% endfor %}
 
           {% for stage in stages_sans_eval %}
-            <div class="todo-item">
+            <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
               <span class="todo-icon todo-icon--info"><i data-lucide="clipboard-check"></i></span>
               <div class="todo-content">
                 <div class="todo-title">Évaluation mi-parcours manquante</div>
-                <div class="todo-desc">{{ stage.stagiaire.user.get_full_name }} — semaine {{ stage.semaines_ecoulees }}/{{ stage.duree_totale_semaines }}</div>
+                <div class="todo-desc">{{ stage.stagiaire.user.get_full_name }} • semaine {{ stage.semaines_ecoulees }}/{{ stage.duree_totale_semaines }}</div>
               </div>
-            </div>
+            </a>
           {% endfor %}
 
           {% if not conventions_en_attente and not stages_sans_eval %}
-            <p style="color:var(--color-text-muted); font-size:14px;">Rien en attente pour le moment 🎉</p>
+            <p style="color:var(--color-text-muted); font-size:14px;">Rien en attente pour le moment.</p>
           {% endif %}
         </div>
       </div>
     </div>
   </div>
 
+{% endblock %}
+
+{% block page_js %}
+<script>
+  // Graphique en SVG natif (aucune dépendance externe -> fonctionne hors-ligne).
+  (function () {
+    var chartData = JSON.parse(document.getElementById('chart-data').textContent);
+    var conteneur = document.getElementById('activite-chart');
+
+    if (!chartData.labels.length) {
+      conteneur.outerHTML = '<p class="chart-panel-empty">Pas encore assez de données pour afficher un graphique.</p>';
+      return;
+    }
+
+    var couleurSuccess = '#16a34a';   // Candidatures
+    var couleurPrimaire = '#6d5ef8';  // Nouveaux stagiaires
+
+    var W = 1000, H = 320;
+    var padL = 40, padR = 12, padT = 16, padB = 34;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+
+    var toutesValeurs = chartData.candidatures.concat(chartData.stagiaires);
+    var maxBrut = Math.max.apply(null, toutesValeurs.concat([1]));
+    var maxVal = Math.max(5, Math.ceil(maxBrut / 5) * 5);
+
+    var n = chartData.labels.length;
+    var xStep = n > 1 ? plotW / (n - 1) : 0;
+    function x(i) { return padL + i * xStep; }
+    function y(v) { return padT + plotH - (v / maxVal) * plotH; }
+
+    function chemin(valeurs) {
+      return valeurs.map(function (v, i) { return (i === 0 ? 'M' : 'L') + x(i) + ',' + y(v); }).join(' ');
+    }
+    function aire(valeurs) {
+      var base = padT + plotH;
+      return chemin(valeurs) + ' L' + x(valeurs.length - 1) + ',' + base + ' L' + x(0) + ',' + base + ' Z';
+    }
+    function points(valeurs, couleur) {
+      return valeurs.map(function (v, i) {
+        return '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="4" fill="' + couleur + '" stroke="#fff" stroke-width="2">' +
+          '<title>' + chartData.labels[i] + ' : ' + v + '</title></circle>';
+      }).join('');
+    }
+
+    // Grille + repères de l'axe Y (0, 25%, 50%, 75%, 100% de maxVal)
+    var grille = '', labelsY = '';
+    for (var g = 0; g <= 4; g++) {
+      var valeur = Math.round((maxVal * g / 4) / 5) * 5;
+      var yy = y(valeur);
+      grille += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="#eef0f2" stroke-width="1"/>';
+      labelsY += '<text x="' + (padL - 10) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="12" fill="#9aa0ac" font-family="Inter">' + valeur + '</text>';
+    }
+
+    var labelsX = chartData.labels.map(function (label, i) {
+      return '<text x="' + x(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="#9aa0ac" font-family="Inter">' + label + '</text>';
+    }).join('');
+
+    var svg =
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:100%;display:block;" preserveAspectRatio="none">' +
+        '<defs>' +
+          '<linearGradient id="degradeSuccess" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="' + couleurSuccess + '" stop-opacity="0.22"/>' +
+            '<stop offset="100%" stop-color="' + couleurSuccess + '" stop-opacity="0"/>' +
+          '</linearGradient>' +
+          '<linearGradient id="degradePrimaire" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="' + couleurPrimaire + '" stop-opacity="0.22"/>' +
+            '<stop offset="100%" stop-color="' + couleurPrimaire + '" stop-opacity="0"/>' +
+          '</linearGradient>' +
+        '</defs>' +
+        grille + labelsY + labelsX +
+        '<path d="' + aire(chartData.candidatures) + '" fill="url(#degradeSuccess)"/>' +
+        '<path d="' + chemin(chartData.candidatures) + '" fill="none" stroke="' + couleurSuccess + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        '<path d="' + aire(chartData.stagiaires) + '" fill="url(#degradePrimaire)"/>' +
+        '<path d="' + chemin(chartData.stagiaires) + '" fill="none" stroke="' + couleurPrimaire + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        points(chartData.candidatures, couleurSuccess) +
+        points(chartData.stagiaires, couleurPrimaire) +
+      '</svg>';
+
+    conteneur.innerHTML = svg;
+  })();
+</script>
 {% endblock %}

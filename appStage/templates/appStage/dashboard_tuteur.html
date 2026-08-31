@@ -1,6 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
-{% block title %}Espace Maître de Stage — BCBStageFlow{% endblock %}
+{% block title %}Espace Maître de Stage - BCBStageFlow{% endblock %}
 
 {% block page_eyebrow %}<span class="eyebrow">Espace Maître de Stage</span>{% endblock %}
 {% block page_title %}Bonjour, {{ user.get_full_name|default:user.username }}{% endblock %}
@@ -123,11 +123,11 @@
           {% endfor %}
 
           {% if not rapports_a_valider and not demandes_en_attente %}
-            <p style="color:var(--color-text-muted); font-size:14px;">Rien à valider pour le moment 🎉</p>
+            <p style="color:var(--color-text-muted); font-size:14px;">Rien à valider pour le moment.</p>
           {% endif %}
         </div>
 
-        <a href="{% url 'appStage:mes_stagiaires' %}" class="list-cta" style="display:block; text-align:center; text-decoration:none;">Voir toutes les tâches</a>
+        <a href="{% url 'appStage:mes_stagiaires' %}" class="list-cta" style="text-decoration:none;">Voir toutes les tâches</a>
       </div>
     </div>
   </div>

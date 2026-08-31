@@ -213,6 +213,31 @@
 }
 
 /* ---------------------------------------------------------
+   Bouton "Retour" (pages de détail)
+   Note : .dashboard-content est un flex column, donc tout enfant
+   direct s'étire en pleine largeur (align-items: stretch) sauf
+   s'il définit son propre align-self — d'où .btn-back ci-dessous.
+   --------------------------------------------------------- */
+.btn-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+}
+.btn-back:hover { background: #000; }
+.btn-back:active { transform: translateY(1px); }
+.btn-back [data-lucide] { width: 14px; height: 14px; }
+
+/* ---------------------------------------------------------
    Mise en page en colonnes
    --------------------------------------------------------- */
 .dash-grid {
@@ -325,6 +350,42 @@
   border: none;
 }
 
+/* ---------------------------------------------------------
+   Graphique d'activité (Dashboard RH)
+   --------------------------------------------------------- */
+.chart-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.chart-legend { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.chart-legend-item::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+.chart-legend-item--alt::before { background: var(--color-primary); }
+.chart-panel-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.chart-canvas-wrap { position: relative; height: 280px; width: 100%; }
+
 .tab-group {
   display: inline-flex;
   gap: 2px;
@@ -346,6 +407,7 @@
   align-items: center;
 }
 .tab-item.active { background: #fff; color: var(--color-text); box-shadow: var(--shadow-sm); }
+.tab-item [data-lucide] { width: 15px; height: 15px; }
 
 /* Liste de stagiaires (RH) */
 .person-row {
@@ -389,13 +451,19 @@
   height: 46px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-bg);
   color: var(--color-text);
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.list-cta:hover { background: #fafafa; }
+.list-cta [data-lucide] { width: 15px; height: 15px; }
+.list-cta:hover { background: var(--color-primary-soft); color: var(--color-primary); border-color: transparent; }
 
 /* Carte CTA sombre annonce (RH) */
 .announce-icon {
@@ -416,7 +484,18 @@
 
 /* Todo / tâches à valider */
 .todo-list { display: flex; flex-direction: column; gap: 14px; }
-.todo-item { display: flex; gap: 12px; align-items: flex-start; }
+.todo-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+a.todo-item:hover { background: var(--color-bg); }
 .todo-icon {
   width: 40px;
   height: 40px;
@@ -657,15 +736,14 @@
 .doc-info .doc-name { font-size: 13.5px; font-weight: 600; }
 .doc-info .doc-meta { font-size: 12px; color: var(--color-text-faint); margin-top: 1px; }
 
-.star-row [data-lucide] { width: 15px; height: 15px; color: #f0b429; }
-.star-row [data-lucide].star-off { color: #e5e5ea; }
-
 .feedback-quote {
   font-size: 13.5px;
   font-style: italic;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   line-height: 1.6;
   margin: 14px 0 16px;
+  padding-left: 12px;
+  border-left: 3px solid var(--color-primary-soft);
 }
 .feedback-author { display: flex; align-items: center; gap: 10px; }
 .feedback-author .person-name { font-size: 13.5px; }
@@ -811,7 +889,16 @@
   grid-template-columns: 1fr 1fr;
   gap: 18px 32px;
 }
-.info-grid dt { font-size: 12px; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.03em; }
+.info-grid dt {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.info-grid dt [data-lucide] { width: 13px; height: 13px; color: var(--color-primary); }
 .info-grid dd { font-size: 14.5px; font-weight: 600; margin-top: 3px; }
 
 /* Missions (fiche + mes-missions), sans barre colorée */
@@ -855,25 +942,58 @@
 
 .segmented {
   display: inline-flex;
+  align-self: flex-start;
   padding: 4px;
-  border-radius: var(--radius-md);
-  background: #f0f0f3;
-  gap: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  gap: 2px;
 }
 .segmented-item {
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
   border: none;
   background: transparent;
   color: var(--color-text-muted);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13.5px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
+/* Survol : même teinte indigo douce que les liens de la sidebar au survol */
+.segmented-item:hover { background: var(--color-primary-soft); color: var(--color-primary); }
 .segmented-item.active { background: var(--color-primary); color: #fff; }
+.segmented-item.active:hover { background: var(--color-primary); color: #fff; }
+
+/* Bandeau dynamique sous le toggle : état de l'évaluation existante + action */
+.eval-hint {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.eval-hint [data-lucide] { color: var(--color-text-faint); }
+.eval-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.eval-hint-chip:hover { background: var(--color-primary); color: #fff; }
 
 .score-donut-wrap { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
 .score-donut {
@@ -985,21 +1105,42 @@
 .person-row.is-link:hover { background: #fafafa; }
 
 .candidature-card {
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 18px;
-  margin-bottom: 14px;
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.candidature-card:hover { border-color: var(--color-primary-soft); box-shadow: var(--shadow-md); }
 .candidature-card:last-child { margin-bottom: 0; }
 .candidature-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.candidature-identity { display: flex; align-items: flex-start; gap: 12px; }
 .candidature-motif {
-  margin-top: 10px;
+  margin-top: 12px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   background: var(--color-danger-bg);
   color: var(--color-danger);
   font-size: 13px;
 }
+
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.doc-chip:hover { background: var(--color-primary); color: #fff; }
+.doc-chip [data-lucide] { width: 13px; height: 13px; }
+.doc-chip-empty { font-size: 12.5px; color: var(--color-text-faint); }
 /* ---------------------------------------------------------
    Champs de formulaire (candidatures, évaluation, paramètres...)
    --------------------------------------------------------- */
@@ -1029,6 +1170,7 @@
 }
 
 .form-group .field-error { font-size: 12.5px; color: var(--color-danger); font-weight: 600; }
+.form-hint { font-size: 12px; color: var(--color-text-faint); margin-top: 2px; line-height: 1.5; }
 .form-errors {
   background: var(--color-danger-bg);
   color: var(--color-danger);
