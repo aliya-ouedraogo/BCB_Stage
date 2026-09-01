@@ -83,6 +83,9 @@
             </div>
             <span class="person-dates">{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</span>
             {% if stage.statut == 'EN_COURS' %}
+              <span class="chip" style="min-width:52px; text-align:center;">{{ stage.progression_pourcentage }}%</span>
+            {% endif %}
+            {% if stage.statut == 'EN_COURS' %}
               <span class="badge badge-success">En cours</span>
             {% elif stage.statut == 'TERMINE' %}
               <span class="badge badge-neutral">Terminé</span>
@@ -116,6 +119,29 @@
         <h2 class="panel-title">À faire</h2>
         <div class="todo-list">
 
+          {% for stage in stages_periode_depassee %}
+            <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
+              <span class="todo-icon todo-icon--danger"><i data-lucide="calendar-x"></i></span>
+              <div class="todo-content">
+                <div class="todo-title">Stage à clôturer</div>
+                <div class="todo-desc">{{ stage.stagiaire.user.get_full_name }} • date de fin dépassée de {{ stage.jours_restants|cut:"-" }} j</div>
+              </div>
+            </a>
+          {% endfor %}
+
+          {% for stage in stages_fin_proche %}
+            <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
+              <span class="todo-icon todo-icon--warning"><i data-lucide="calendar-clock"></i></span>
+              <div class="todo-content">
+                <div class="todo-title">Stage bientôt terminé</div>
+                <div class="todo-desc">
+                  {{ stage.stagiaire.user.get_full_name }} •
+                  {% if stage.jours_restants == 0 %}se termine aujourd'hui{% else %}se termine dans {{ stage.jours_restants }} j{% endif %}
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+
           {% for doc in conventions_en_attente %}
             <a href="{% url 'appStage:documents_recus_rh' %}?type=CONVENTION" class="todo-item">
               <span class="todo-icon todo-icon--danger"><i data-lucide="alert-triangle"></i></span>
@@ -136,7 +162,7 @@
             </a>
           {% endfor %}
 
-          {% if not conventions_en_attente and not stages_sans_eval %}
+          {% if not stages_periode_depassee and not stages_fin_proche and not conventions_en_attente and not stages_sans_eval %}
             <p style="color:var(--color-text-muted); font-size:14px;">Rien en attente pour le moment.</p>
           {% endif %}
         </div>

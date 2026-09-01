@@ -260,6 +260,40 @@ class Candidature(models.Model):
             fail_silently=False,
         )
 
+    def notifier_rh(self):
+        """
+        Prévient toute l'équipe RH par email dès qu'une nouvelle candidature
+        arrive, pour qu'elle n'ait pas à surveiller la page en continu.
+        N'empêche jamais la soumission de la candidature si l'envoi échoue
+        (fail_silently) : le RH la verra de toute façon sur son dashboard.
+        """
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        from django.urls import reverse
+
+        emails_rh = list(
+            User.objects.filter(role=User.Role.RH, is_active=True)
+            .exclude(email='').values_list('email', flat=True)
+        )
+        if not emails_rh:
+            return
+
+        lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:candidatures')}"
+        send_mail(
+            subject="Nouvelle candidature reçue - BCBStageFlow",
+            message=(
+                f"Une nouvelle candidature vient d'être déposée.\n\n"
+                f"Candidat : {self.nom_complet}\n"
+                f"Poste souhaité : {self.poste_souhaite}\n"
+                f"Email : {self.email}\n"
+                f"Téléphone : {self.telephone or 'non renseigné'}\n\n"
+                f"Pour la consulter et y répondre :\n{lien_complet}"
+            ),
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=emails_rh,
+            fail_silently=True,
+        )
+
     def _generer_username(self):
         base = ''.join(self.nom_complet.lower().split())
         username, n = base, 1
@@ -332,6 +366,20 @@ class Stage(models.Model):
             return None
         presents = self.presences.filter(present=True).count()
         return round((presents / total) * 100)
+
+    @property
+    def jours_restants(self):
+        return (self.date_fin - timezone.now().date()).days
+
+    @property
+    def se_termine_bientot(self):
+        """Encore en cours, mais à moins de 7 jours de la date de fin prévue."""
+        return self.statut == self.Statut.EN_COURS and 0 <= self.jours_restants <= 7
+
+    @property
+    def periode_depassee(self):
+        """Toujours marqué 'en cours' alors que la date de fin est passée : à clôturer."""
+        return self.statut == self.Statut.EN_COURS and self.jours_restants < 0
 
 
 class DemandeEncadrement(models.Model):

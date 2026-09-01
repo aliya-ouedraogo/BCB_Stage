@@ -7,6 +7,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.conf import settings
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -78,7 +79,8 @@ def candidature_publique(request):
     if request.method == 'POST':
         form = CandidaturePubliqueForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            candidature = form.save()
+            candidature.notifier_rh()
             return render(request, 'appStage/candidature_envoyee.html')
     else:
         form = CandidaturePubliqueForm()
@@ -176,6 +178,11 @@ def dashboard_rh(request):
     ).exclude(evaluations__type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS) \
      .select_related('stagiaire__user')
 
+    # --- Alertes de fin de période de stage ---
+    stages_en_cours = Stage.objects.filter(statut=Stage.Statut.EN_COURS).select_related('stagiaire__user')
+    stages_fin_proche = [s for s in stages_en_cours if s.se_termine_bientot]
+    stages_periode_depassee = [s for s in stages_en_cours if s.periode_depassee]
+
     # --- Graphique : candidatures reçues et nouveaux stagiaires, 6 derniers mois ---
     mois_glissants = [_premier_jour_mois_glissant(aujourdhui, n) for n in range(5, -1, -1)]
     chart_data = {
@@ -201,6 +208,8 @@ def dashboard_rh(request):
         'stagiaires_recents': stagiaires_recents,
         'conventions_en_attente': conventions_en_attente[:3],
         'stages_sans_eval': stages_sans_eval[:3],
+        'stages_periode_depassee': stages_periode_depassee[:3],
+        'stages_fin_proche': stages_fin_proche[:3],
         'filtre_statut': filtre_statut,
         'chart_data': chart_data,
         'annee_courante': aujourdhui.year,
@@ -212,7 +221,25 @@ def dashboard_rh(request):
 def liste_stagiaires(request):
     stages = Stage.objects.select_related('stagiaire__user', 'departement', 'maitre_de_stage__user') \
         .order_by('-date_debut')
-    return render(request, 'appStage/liste_stagiaires.html', {'stages': stages})
+
+    recherche = request.GET.get('q', '').strip()
+    if recherche:
+        stages = stages.filter(
+            Q(stagiaire__user__first_name__icontains=recherche) |
+            Q(stagiaire__user__last_name__icontains=recherche) |
+            Q(intitule_poste__icontains=recherche) |
+            Q(departement__nom__icontains=recherche)
+        )
+
+    filtre_statut = request.GET.get('statut', '')
+    if filtre_statut in dict(Stage.Statut.choices):
+        stages = stages.filter(statut=filtre_statut)
+
+    return render(request, 'appStage/liste_stagiaires.html', {
+        'stages': stages,
+        'recherche': recherche,
+        'filtre_statut': filtre_statut,
+    })
 
 
 @role_required(User.Role.RH)

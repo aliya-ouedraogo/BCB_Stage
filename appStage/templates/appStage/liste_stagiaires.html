@@ -5,6 +5,20 @@
 {% block page_subtitle %}<span class="subtitle">Tous les stagiaires de l'organisation, tous départements confondus.</span>{% endblock %}
 
 {% block dashboard_content %}
+  <form method="get" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:4px;">
+    {% if filtre_statut %}<input type="hidden" name="statut" value="{{ filtre_statut }}">{% endif %}
+    <div class="input-icon-wrap" style="max-width:340px; flex:1;">
+      <i data-lucide="search"></i>
+      <input type="search" name="q" value="{{ recherche }}" placeholder="Rechercher un nom, un poste, un département...">
+    </div>
+    <div class="tab-group">
+      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}" class="tab-item {% if not filtre_statut %}active{% endif %}">Tous</a>
+      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=EN_COURS" class="tab-item {% if filtre_statut == 'EN_COURS' %}active{% endif %}">En cours</a>
+      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=A_VENIR" class="tab-item {% if filtre_statut == 'A_VENIR' %}active{% endif %}">À venir</a>
+      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=TERMINE" class="tab-item {% if filtre_statut == 'TERMINE' %}active{% endif %}">Terminés</a>
+    </div>
+  </form>
+
   <div class="panel">
     {% for stage in stages %}
       <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link">
@@ -19,6 +33,9 @@
         </div>
         <span class="person-dates">{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</span>
         {% if stage.statut == 'EN_COURS' %}
+          <span class="chip" style="min-width:52px; text-align:center;">{{ stage.progression_pourcentage }}%</span>
+        {% endif %}
+        {% if stage.statut == 'EN_COURS' %}
           <span class="badge badge-success">En cours</span>
         {% elif stage.statut == 'TERMINE' %}
           <span class="badge badge-neutral">Terminé</span>
@@ -28,7 +45,9 @@
         <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--color-text-faint);margin-left:8px;"></i>
       </a>
     {% empty %}
-      <p style="color:var(--color-text-muted); font-size:14px;">Aucun stagiaire enregistré.</p>
+      <p style="color:var(--color-text-muted); font-size:14px;">
+        {% if recherche or filtre_statut %}Aucun stagiaire ne correspond à cette recherche.{% else %}Aucun stagiaire enregistré.{% endif %}
+      </p>
     {% endfor %}
   </div>
 {% endblock %}
