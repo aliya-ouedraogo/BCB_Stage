@@ -265,10 +265,11 @@ def accepter_candidature(request, candidature_id):
             date_fin=form.cleaned_data['date_fin'],
             avec_soutenance=form.cleaned_data['avec_soutenance'],
         )
-        if settings.DEBUG:
-            # Filet de sécurité en développement : le lien s'affiche
-            # directement dans l'UI, pas besoin de dépendre du terminal
-            # où tourne runserver pour voir l'email envoyé.
+        if not settings.EMAIL_REELLEMENT_CONFIGURE:
+            # Filet de sécurité tant qu'aucun SMTP réel n'est configuré : le
+            # lien s'affiche directement dans l'UI, pas besoin de dépendre du
+            # terminal où tourne runserver pour voir l'email envoyé. Dès que
+            # EMAIL_HOST est défini, un vrai email part et ce filet disparaît.
             #
             # IMPORTANT : nom_complet vient d'un formulaire PUBLIC (saisie
             # non fiable) — on l'échappe explicitement avant de l'insérer
@@ -279,7 +280,7 @@ def accepter_candidature(request, candidature_id):
                 request,
                 mark_safe(
                     f"Candidature de {nom_echappe} acceptée, compte créé. "
-                    f"<strong>Lien d'activation (visible uniquement en dev)&nbsp;:</strong> "
+                    f"<strong>Lien d'activation (aucun SMTP configuré pour l'instant)&nbsp;:</strong> "
                     f"<a href=\"{lien_activation}\">{lien_activation}</a>"
                 ),
             )
