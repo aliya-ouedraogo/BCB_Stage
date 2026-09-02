@@ -145,6 +145,7 @@ def _premier_jour_mois_glissant(date_reference, n_mois_avant):
 
 @role_required(User.Role.RH)
 def dashboard_rh(request):
+    Stage.synchroniser_statuts()
     aujourdhui = timezone.now().date()
     debut_mois = aujourdhui.replace(day=1)
 
@@ -178,10 +179,13 @@ def dashboard_rh(request):
     ).exclude(evaluations__type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS) \
      .select_related('stagiaire__user')
 
-    # --- Alertes de fin de période de stage ---
+    # --- Alertes de fin (et de début) de période de stage ---
     stages_en_cours = Stage.objects.filter(statut=Stage.Statut.EN_COURS).select_related('stagiaire__user')
     stages_fin_proche = [s for s in stages_en_cours if s.se_termine_bientot]
     stages_periode_depassee = [s for s in stages_en_cours if s.periode_depassee]
+
+    stages_a_venir = Stage.objects.filter(statut=Stage.Statut.A_VENIR).select_related('stagiaire__user')
+    stages_debut_proche = [s for s in stages_a_venir if s.demarre_bientot]
 
     # --- Graphique : candidatures reçues et nouveaux stagiaires, 6 derniers mois ---
     mois_glissants = [_premier_jour_mois_glissant(aujourdhui, n) for n in range(5, -1, -1)]
@@ -210,6 +214,7 @@ def dashboard_rh(request):
         'stages_sans_eval': stages_sans_eval[:3],
         'stages_periode_depassee': stages_periode_depassee[:3],
         'stages_fin_proche': stages_fin_proche[:3],
+        'stages_debut_proche': stages_debut_proche[:3],
         'filtre_statut': filtre_statut,
         'chart_data': chart_data,
         'annee_courante': aujourdhui.year,
@@ -219,6 +224,7 @@ def dashboard_rh(request):
 
 @role_required(User.Role.RH)
 def liste_stagiaires(request):
+    Stage.synchroniser_statuts()
     stages = Stage.objects.select_related('stagiaire__user', 'departement', 'maitre_de_stage__user') \
         .order_by('-date_debut')
 
@@ -235,11 +241,18 @@ def liste_stagiaires(request):
     if filtre_statut in dict(Stage.Statut.choices):
         stages = stages.filter(statut=filtre_statut)
 
-    return render(request, 'appStage/liste_stagiaires.html', {
+    context = {
         'stages': stages,
         'recherche': recherche,
         'filtre_statut': filtre_statut,
-    })
+    }
+
+    # Requête de recherche en direct (voir script dans liste_stagiaires.html) :
+    # on ne renvoie que le fragment de résultats, sans recharger toute la page.
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'appStage/_resultats_stagiaires.html', context)
+
+    return render(request, 'appStage/liste_stagiaires.html', context)
 
 
 @role_required(User.Role.RH)
@@ -306,12 +319,30 @@ def refuser_candidature(request, candidature_id):
     return redirect('appStage:candidatures')
 
 
+@require_POST
+@role_required(User.Role.RH)
+def supprimer_candidature(request, candidature_id):
+    """
+    Supprime définitivement une candidature déjà traitée (acceptée ou refusée) —
+    utile pour nettoyer les doublons de test. Le compte stagiaire éventuellement
+    créé lors de l'acceptation n'est PAS supprimé (le lien est simplement détaché).
+    """
+    candidature = get_object_or_404(
+        Candidature, pk=candidature_id, statut__in=[Candidature.Statut.ACCEPTEE, Candidature.Statut.REFUSEE]
+    )
+    nom = candidature.nom_complet
+    candidature.delete()
+    messages.success(request, f"Candidature de {nom} supprimée.")
+    return redirect('appStage:candidatures')
+
+
 # =========================================================
 # Espace Maître de Stage
 # =========================================================
 
 @role_required(User.Role.MAITRE_STAGE)
 def dashboard_tuteur(request):
+    Stage.synchroniser_statuts()
     profil = request.user.profil_maitre_stage
     aujourdhui = timezone.now().date()
 
@@ -472,6 +503,7 @@ def _get_stage_ou_403(request, stage_id):
 
 @role_required(User.Role.MAITRE_STAGE, User.Role.RH)
 def fiche_stagiaire(request, stage_id):
+    Stage.synchroniser_statuts()
     stage = _get_stage_ou_403(request, stage_id)
     context = {
         'stage': stage,

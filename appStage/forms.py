@@ -33,8 +33,26 @@ class CandidaturePubliqueForm(forms.ModelForm):
         }
         widgets = {
             'departement_souhaite': forms.Select(attrs={'required': False}),
-            'annee_etude': forms.TextInput(attrs={'placeholder': "Ex : 3ème Année"}),
+            'telephone': forms.TextInput(attrs={
+                'placeholder': "70000000",
+                'inputmode': 'numeric',
+                'maxlength': '8',
+                'pattern': r'[0-9]{8}',
+                'title': "8 chiffres, sans le +226",
+            }),
         }
+
+    def clean_telephone(self):
+        brut = self.cleaned_data.get('telephone', '')
+        chiffres = ''.join(c for c in brut if c.isdigit())
+        # Tolère qu'on ait quand même tapé l'indicatif (+226 ou 00226) par réflexe.
+        if chiffres.startswith('226') and len(chiffres) == 11:
+            chiffres = chiffres[3:]
+        if len(chiffres) != 8:
+            raise forms.ValidationError(
+                "Le numéro doit contenir exactement 8 chiffres (numéro burkinabè, sans l'indicatif)."
+            )
+        return f"+226{chiffres}"
 
     def clean_email(self):
         email = self.cleaned_data['email']

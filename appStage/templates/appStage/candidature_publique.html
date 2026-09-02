@@ -43,7 +43,11 @@
           </div>
           <div class="form-group">
             <label for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }}</label>
-            {{ form.telephone }}
+            <div class="tel-input-wrap" style="display:flex; align-items:center; gap:6px;">
+              <span style="font-weight:600; color:var(--color-text-muted); white-space:nowrap;">+226</span>
+              {{ form.telephone }}
+            </div>
+            {% for error in form.telephone.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
           </div>
         </div>
 
@@ -107,5 +111,15 @@
     </section>
 
   </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('{{ form.telephone.id_for_label }}');
+      if (!champ) return;
+      champ.addEventListener('input', function () {
+        champ.value = champ.value.replace(/\D/g, '').slice(0, 8);
+      });
+    })();
+  </script>
 </main>
 {% endblock %}

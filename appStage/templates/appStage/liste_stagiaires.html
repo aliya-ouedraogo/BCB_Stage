@@ -5,11 +5,12 @@
 {% block page_subtitle %}<span class="subtitle">Tous les stagiaires de l'organisation, tous départements confondus.</span>{% endblock %}
 
 {% block dashboard_content %}
-  <form method="get" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:4px;">
+  <form method="get" id="form-recherche-stagiaires" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:4px;">
     {% if filtre_statut %}<input type="hidden" name="statut" value="{{ filtre_statut }}">{% endif %}
-    <div class="input-icon-wrap" style="max-width:340px; flex:1;">
+    <div class="input-icon-wrap" style="max-width:340px; flex:1; position:relative;">
       <i data-lucide="search"></i>
-      <input type="search" name="q" value="{{ recherche }}" placeholder="Rechercher un nom, un poste, un département...">
+      <input type="search" name="q" id="champ-recherche-stagiaires" value="{{ recherche }}" placeholder="Rechercher un nom, un poste, un département..." autocomplete="off">
+      <span id="indicateur-recherche" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11.5px; color:var(--color-text-muted); opacity:0; transition:opacity 0.15s ease; pointer-events:none;">recherche…</span>
     </div>
     <div class="tab-group">
       <a href="?{% if recherche %}q={{ recherche }}&{% endif %}" class="tab-item {% if not filtre_statut %}active{% endif %}">Tous</a>
@@ -20,34 +21,58 @@
   </form>
 
   <div class="panel">
-    {% for stage in stages %}
-      <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link">
-        {% if stage.stagiaire.user.photo %}
-          <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
-        {% else %}
-          <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
-        {% endif %}
-        <div class="person-info">
-          <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
-          <span class="person-role">{{ stage.departement.nom }}{% if stage.maitre_de_stage %} &bull; {{ stage.maitre_de_stage.user.get_full_name }}{% endif %}</span>
-        </div>
-        <span class="person-dates">{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</span>
-        {% if stage.statut == 'EN_COURS' %}
-          <span class="chip" style="min-width:52px; text-align:center;">{{ stage.progression_pourcentage }}%</span>
-        {% endif %}
-        {% if stage.statut == 'EN_COURS' %}
-          <span class="badge badge-success">En cours</span>
-        {% elif stage.statut == 'TERMINE' %}
-          <span class="badge badge-neutral">Terminé</span>
-        {% else %}
-          <span class="badge badge-info">{{ stage.get_statut_display }}</span>
-        {% endif %}
-        <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--color-text-faint);margin-left:8px;"></i>
-      </a>
-    {% empty %}
-      <p style="color:var(--color-text-muted); font-size:14px;">
-        {% if recherche or filtre_statut %}Aucun stagiaire ne correspond à cette recherche.{% else %}Aucun stagiaire enregistré.{% endif %}
-      </p>
-    {% endfor %}
+    <div id="resultats-stagiaires">
+      {% include "appStage/_resultats_stagiaires.html" %}
+    </div>
   </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('champ-recherche-stagiaires');
+      var form = document.getElementById('form-recherche-stagiaires');
+      var resultats = document.getElementById('resultats-stagiaires');
+      var indicateur = document.getElementById('indicateur-recherche');
+      if (!champ || !form || !resultats) return;
+
+      // Garde le focus + le curseur en fin de champ (utile si la page se recharge,
+      // par ex. via les onglets Tous / En cours / etc.)
+      if (champ.value) {
+        champ.focus();
+        var val = champ.value;
+        champ.value = '';
+        champ.value = val;
+      }
+
+      function rafraichirResultats() {
+        var params = new URLSearchParams(new FormData(form));
+        var url = window.location.pathname + '?' + params.toString();
+
+        if (indicateur) indicateur.style.opacity = '1';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(function (reponse) { return reponse.text(); })
+          .then(function (html) {
+            resultats.innerHTML = html;
+            if (window.lucide) window.lucide.createIcons();
+            // Met à jour l'URL affichée sans recharger la page, pour que le
+            // lien reste partageable / conservé au rafraîchissement (F5).
+            window.history.replaceState(null, '', url);
+          })
+          .catch(function () { /* pas grave : l'utilisateur peut toujours ré-essayer */ })
+          .finally(function () {
+            if (indicateur) indicateur.style.opacity = '0';
+          });
+      }
+
+      // "Debounce" : on ne lance la recherche que ~300ms après la dernière
+      // frappe, pour ne pas envoyer une requête à chaque lettre tapée. Si vous
+      // tapez plus vite que ce délai, le chronomètre est juste redémarré — la
+      // recherche part dès que vous marquez une petite pause.
+      var minuteur = null;
+      champ.addEventListener('input', function () {
+        clearTimeout(minuteur);
+        minuteur = setTimeout(rafraichirResultats, 300);
+      });
+    })();
+  </script>
 {% endblock %}

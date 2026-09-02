@@ -64,14 +64,36 @@
         </div>
 
         {% if c.statut == 'EN_ATTENTE' %}
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('accept-{{ c.id }}').classList.remove('open'); document.getElementById('refuse-{{ c.id }}').classList.toggle('open')">Refuser</button>
-            <button class="btn btn-primary btn-sm" onclick="document.getElementById('refuse-{{ c.id }}').classList.remove('open'); document.getElementById('accept-{{ c.id }}').classList.toggle('open')">Accepter</button>
+          <div id="actions-{{ c.id }}" style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-refuser-{{ c.id }}"
+              onclick="document.getElementById('accept-{{ c.id }}').classList.remove('open'); document.getElementById('refuse-{{ c.id }}').classList.add('open'); document.getElementById('btn-refuser-{{ c.id }}').style.display='none'; document.getElementById('btn-accepter-{{ c.id }}').style.display='none'; document.getElementById('btn-annuler-{{ c.id }}').style.display='inline-flex';">Refuser</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-accepter-{{ c.id }}"
+              onclick="document.getElementById('refuse-{{ c.id }}').classList.remove('open'); document.getElementById('accept-{{ c.id }}').classList.add('open'); document.getElementById('btn-refuser-{{ c.id }}').style.display='none'; document.getElementById('btn-accepter-{{ c.id }}').style.display='none'; document.getElementById('btn-annuler-{{ c.id }}').style.display='inline-flex';">Accepter</button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-annuler-{{ c.id }}" style="display:none;"
+              onclick="document.getElementById('accept-{{ c.id }}').classList.remove('open'); document.getElementById('refuse-{{ c.id }}').classList.remove('open'); document.getElementById('btn-refuser-{{ c.id }}').style.display='inline-flex'; document.getElementById('btn-accepter-{{ c.id }}').style.display='inline-flex'; document.getElementById('btn-annuler-{{ c.id }}').style.display='none';">Annuler</button>
           </div>
         {% elif c.statut == 'ACCEPTEE' %}
-          <span class="badge badge-success">Acceptée</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="badge badge-success">Acceptée</span>
+            <form method="post" action="{% url 'appStage:supprimer_candidature' c.id %}"
+              onsubmit="return confirm('Supprimer définitivement cette candidature ({{ c.nom_complet }}) ? Le compte stagiaire déjà créé, s\'il existe, ne sera pas supprimé.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-sm" title="Supprimer cette candidature">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </form>
+          </div>
         {% else %}
-          <span class="badge badge-warning">Refusée</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="badge badge-warning">Refusée</span>
+            <form method="post" action="{% url 'appStage:supprimer_candidature' c.id %}"
+              onsubmit="return confirm('Supprimer définitivement cette candidature ({{ c.nom_complet }}) ?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-sm" title="Supprimer cette candidature">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </form>
+          </div>
         {% endif %}
       </div>
 

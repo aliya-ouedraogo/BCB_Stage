@@ -20,7 +20,7 @@
         {% endif %}
         <div class="person-info">
           <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
-          <span class="person-role">{{ stage.stagiaire.annee_etude }} &bull; {{ stage.stagiaire.filiere }}</span>
+          <span class="person-role">{{ stage.stagiaire.get_annee_etude_display }} &bull; {{ stage.stagiaire.filiere }}</span>
         </div>
         <span class="person-dates">{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</span>
         {% if stage.statut == 'EN_COURS' %}

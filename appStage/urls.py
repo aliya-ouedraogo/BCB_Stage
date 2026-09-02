@@ -18,6 +18,7 @@ urlpatterns = [
     path('rh/candidatures/', views.candidatures, name='candidatures'),
     path('rh/candidatures/<int:candidature_id>/accepter/', views.accepter_candidature, name='accepter_candidature'),
     path('rh/candidatures/<int:candidature_id>/refuser/', views.refuser_candidature, name='refuser_candidature'),
+    path('rh/candidatures/<int:candidature_id>/supprimer/', views.supprimer_candidature, name='supprimer_candidature'),
     path('rh/documents/', views.documents_recus_rh, name='documents_recus_rh'),
     path('rh/documents/envoyer/<int:stage_id>/', views.envoyer_document_rh, name='envoyer_document_rh'),
 

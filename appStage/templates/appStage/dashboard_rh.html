@@ -6,6 +6,32 @@
 
 {% block dashboard_content %}
 
+  {% if stages_periode_depassee or stages_fin_proche %}
+    <div class="alert-banner-stack">
+      {% if stages_periode_depassee %}
+        <a href="{% url 'appStage:liste_stagiaires' %}" class="alert-banner alert-banner--danger">
+          <span class="alert-banner-dot"></span>
+          <span>
+            <strong>{{ stages_periode_depassee|length }} stage{{ stages_periode_depassee|length|pluralize }}</strong>
+            {{ stages_periode_depassee|length|pluralize:"a dépassé,ont dépassé" }} sa date de fin et
+            {{ stages_periode_depassee|length|pluralize:"doit être clôturé,doivent être clôturés" }}.
+          </span>
+          <span class="alert-banner-arrow"><i data-lucide="arrow-right"></i></span>
+        </a>
+      {% endif %}
+      {% if stages_fin_proche %}
+        <a href="{% url 'appStage:liste_stagiaires' %}" class="alert-banner alert-banner--warning">
+          <span class="alert-banner-dot"></span>
+          <span>
+            <strong>{{ stages_fin_proche|length }} stage{{ stages_fin_proche|length|pluralize }}</strong>
+            se termine{{ stages_fin_proche|length|pluralize:",nt" }} dans moins de 10 jours — pensez aux départs à préparer.
+          </span>
+          <span class="alert-banner-arrow"><i data-lucide="arrow-right"></i></span>
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <!-- Cartes statistiques -->
   <div class="stat-grid">
     <div class="stat-card stat-card--dark">
@@ -121,7 +147,7 @@
 
           {% for stage in stages_periode_depassee %}
             <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
-              <span class="todo-icon todo-icon--danger"><i data-lucide="calendar-x"></i></span>
+              <span class="todo-bullet todo-bullet--danger"></span>
               <div class="todo-content">
                 <div class="todo-title">Stage à clôturer</div>
                 <div class="todo-desc">{{ stage.stagiaire.user.get_full_name }} • date de fin dépassée de {{ stage.jours_restants|cut:"-" }} j</div>
@@ -131,7 +157,7 @@
 
           {% for stage in stages_fin_proche %}
             <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
-              <span class="todo-icon todo-icon--warning"><i data-lucide="calendar-clock"></i></span>
+              <span class="todo-bullet todo-bullet--warning"></span>
               <div class="todo-content">
                 <div class="todo-title">Stage bientôt terminé</div>
                 <div class="todo-desc">
@@ -142,9 +168,22 @@
             </a>
           {% endfor %}
 
+          {% for stage in stages_debut_proche %}
+            <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
+              <span class="todo-bullet todo-bullet--info"></span>
+              <div class="todo-content">
+                <div class="todo-title">Nouvelle arrivée à préparer</div>
+                <div class="todo-desc">
+                  {{ stage.stagiaire.user.get_full_name }} •
+                  {% if stage.jours_avant_debut == 0 %}commence aujourd'hui{% else %}commence dans {{ stage.jours_avant_debut }} j{% endif %}
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+
           {% for doc in conventions_en_attente %}
             <a href="{% url 'appStage:documents_recus_rh' %}?type=CONVENTION" class="todo-item">
-              <span class="todo-icon todo-icon--danger"><i data-lucide="alert-triangle"></i></span>
+              <span class="todo-bullet todo-bullet--danger"></span>
               <div class="todo-content">
                 <div class="todo-title">Accord de stage non signé</div>
                 <div class="todo-desc">{{ doc.stage.stagiaire.user.get_full_name }} • {{ doc.stage.departement.nom }}</div>
@@ -154,7 +193,7 @@
 
           {% for stage in stages_sans_eval %}
             <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="todo-item">
-              <span class="todo-icon todo-icon--info"><i data-lucide="clipboard-check"></i></span>
+              <span class="todo-bullet todo-bullet--info"></span>
               <div class="todo-content">
                 <div class="todo-title">Évaluation mi-parcours manquante</div>
                 <div class="todo-desc">{{ stage.stagiaire.user.get_full_name }} • semaine {{ stage.semaines_ecoulees }}/{{ stage.duree_totale_semaines }}</div>
@@ -162,7 +201,7 @@
             </a>
           {% endfor %}
 
-          {% if not stages_periode_depassee and not stages_fin_proche and not conventions_en_attente and not stages_sans_eval %}
+          {% if not stages_periode_depassee and not stages_fin_proche and not stages_debut_proche and not conventions_en_attente and not stages_sans_eval %}
             <p style="color:var(--color-text-muted); font-size:14px;">Rien en attente pour le moment.</p>
           {% endif %}
         </div>

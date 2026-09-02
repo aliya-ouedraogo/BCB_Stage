@@ -50,7 +50,7 @@
           <div><dt><i data-lucide="building-2"></i> Département</dt><dd>{{ stage.departement.nom }}</dd></div>
           <div><dt><i data-lucide="calendar"></i> Dates</dt><dd>{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</dd></div>
           <div><dt><i data-lucide="graduation-cap"></i> Filière</dt><dd>{{ stage.stagiaire.filiere|default:"N/A" }}</dd></div>
-          <div><dt><i data-lucide="hash"></i> Année</dt><dd>{{ stage.stagiaire.annee_etude|default:"N/A" }}</dd></div>
+          <div><dt><i data-lucide="hash"></i> Année</dt><dd>{{ stage.stagiaire.get_annee_etude_display|default:"N/A" }}</dd></div>
           <div><dt><i data-lucide="user-check"></i> Maître de stage</dt><dd>{{ stage.maitre_de_stage.user.get_full_name|default:"Non assigné" }}</dd></div>
           <div><dt><i data-lucide="flag"></i> Soutenance / Rapports</dt><dd>{% if stage.avec_soutenance %}Oui{% else %}Non{% endif %}</dd></div>
         </dl>

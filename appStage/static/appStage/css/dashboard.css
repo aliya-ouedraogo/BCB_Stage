@@ -509,6 +509,38 @@ a.todo-item:hover { background: var(--color-bg); }
 .todo-icon--danger { background: var(--color-danger-bg); color: var(--color-danger); }
 .todo-icon--warning { background: var(--color-warning-bg); color: var(--color-warning); }
 .todo-icon--info { background: var(--color-primary-soft); color: var(--color-primary); }
+
+/* Puce colorée (remplace l'icône dans les listes "à faire") */
+.todo-bullet {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.todo-bullet--danger { background: var(--color-danger); }
+.todo-bullet--warning { background: var(--color-warning); }
+.todo-bullet--info { background: var(--color-primary); }
+
+/* Bannière d'alerte en tête de dashboard, visible dès la connexion */
+.alert-banner-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid transparent;
+}
+.alert-banner strong { font-weight: 700; }
+.alert-banner--danger { background: var(--color-danger-bg); border-color: var(--color-danger); color: var(--color-danger); }
+.alert-banner--warning { background: var(--color-warning-bg); border-color: var(--color-warning); color: #8a6100; }
+.alert-banner-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
+.alert-banner-arrow { margin-left: auto; flex-shrink: 0; opacity: 0.7; }
+.alert-banner-arrow [data-lucide] { width: 16px; height: 16px; }
 .todo-content .todo-title { font-size: 14px; font-weight: 700; line-height: 1.35; }
 .todo-content .todo-desc { font-size: 13px; color: var(--color-text-muted); margin-top: 3px; }
 

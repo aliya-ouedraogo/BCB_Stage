@@ -1,7 +1,21 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
+
+validateur_telephone_bf = RegexValidator(
+    regex=r'^\+226[0-9]{8}$',
+    message="Le numéro doit être au format +226 suivi de 8 chiffres.",
+)
+
+
+class AnneeEtude(models.TextChoices):
+    LICENCE_1 = 'LICENCE_1', "1re année de Licence"
+    LICENCE_2 = 'LICENCE_2', "2e année de Licence"
+    LICENCE_3 = 'LICENCE_3', "3e année de Licence"
+    MASTER_1 = 'MASTER_1', "1re année de Master"
+    MASTER_2 = 'MASTER_2', "2e année de Master"
 
 
 # =========================================================
@@ -45,7 +59,7 @@ class ProfilStagiaire(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_stagiaire'
     )
     filiere = models.CharField(max_length=150, blank=True)
-    annee_etude = models.CharField(max_length=50, blank=True)  # ex: "3ème Année"
+    annee_etude = models.CharField(max_length=20, choices=AnneeEtude.choices, blank=True)
     etablissement = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
@@ -122,10 +136,13 @@ class Candidature(models.Model):
 
     nom_complet = models.CharField(max_length=200)
     email = models.EmailField()
-    telephone = models.CharField(max_length=20, blank=True)
+    telephone = models.CharField(max_length=20, blank=True, validators=[validateur_telephone_bf])
     poste_souhaite = models.CharField(max_length=200)
     filiere = models.CharField(max_length=150, blank=True, help_text="Transmise au profil du stagiaire si accepté.")
-    annee_etude = models.CharField(max_length=50, blank=True, help_text="Ex : « 3ème Année ».")
+    annee_etude = models.CharField(
+        max_length=20, choices=AnneeEtude.choices, blank=True,
+        help_text="Année d'étude actuelle du candidat.",
+    )
     cv = models.FileField(upload_to='candidatures/cv/', blank=True, null=True)
     lettre_motivation = models.FileField(upload_to='candidatures/lm/', blank=True, null=True)
     piece_identite = models.FileField(
@@ -377,13 +394,46 @@ class Stage(models.Model):
 
     @property
     def se_termine_bientot(self):
-        """Encore en cours, mais à moins de 7 jours de la date de fin prévue."""
-        return self.statut == self.Statut.EN_COURS and 0 <= self.jours_restants <= 7
+        """Encore en cours, mais à moins de 10 jours de la date de fin prévue."""
+        return self.statut == self.Statut.EN_COURS and 0 <= self.jours_restants <= 10
 
     @property
     def periode_depassee(self):
         """Toujours marqué 'en cours' alors que la date de fin est passée : à clôturer."""
         return self.statut == self.Statut.EN_COURS and self.jours_restants < 0
+
+    @property
+    def demarre_bientot(self):
+        """Pas encore commencé, mais à moins de 10 jours de la date de début prévue."""
+        if self.statut != self.Statut.A_VENIR:
+            return False
+        return 0 <= self.jours_avant_debut <= 10
+
+    @property
+    def jours_avant_debut(self):
+        return (self.date_debut - timezone.now().date()).days
+
+    @classmethod
+    def synchroniser_statuts(cls):
+        """
+        Met à jour automatiquement le statut des stages en fonction de la date du jour :
+        À venir -> En cours -> Terminé. Le statut « Résilié » reste manuel et n'est
+        jamais touché ici. À appeler au début des vues qui affichent des stages,
+        pour que le badge et les listes reflètent toujours la réalité des dates.
+        """
+        aujourdhui = timezone.now().date()
+        cls.objects.exclude(statut=cls.Statut.RESILIE) \
+            .filter(date_fin__lt=aujourdhui) \
+            .exclude(statut=cls.Statut.TERMINE) \
+            .update(statut=cls.Statut.TERMINE)
+        cls.objects.exclude(statut=cls.Statut.RESILIE) \
+            .filter(date_debut__lte=aujourdhui, date_fin__gte=aujourdhui) \
+            .exclude(statut=cls.Statut.EN_COURS) \
+            .update(statut=cls.Statut.EN_COURS)
+        cls.objects.exclude(statut=cls.Statut.RESILIE) \
+            .filter(date_debut__gt=aujourdhui) \
+            .exclude(statut=cls.Statut.A_VENIR) \
+            .update(statut=cls.Statut.A_VENIR)
 
 
 class DemandeEncadrement(models.Model):
