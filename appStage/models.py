@@ -124,6 +124,8 @@ class Candidature(models.Model):
     email = models.EmailField()
     telephone = models.CharField(max_length=20, blank=True)
     poste_souhaite = models.CharField(max_length=200)
+    filiere = models.CharField(max_length=150, blank=True, help_text="Transmise au profil du stagiaire si accepté.")
+    annee_etude = models.CharField(max_length=50, blank=True, help_text="Ex : « 3ème Année ».")
     cv = models.FileField(upload_to='candidatures/cv/', blank=True, null=True)
     lettre_motivation = models.FileField(upload_to='candidatures/lm/', blank=True, null=True)
     piece_identite = models.FileField(
@@ -190,7 +192,9 @@ class Candidature(models.Model):
         user.set_unusable_password()
         user.save()
 
-        profil = ProfilStagiaire.objects.create(user=user)
+        profil = ProfilStagiaire.objects.create(
+            user=user, filiere=self.filiere, annee_etude=self.annee_etude,
+        )
 
         stage = Stage.objects.create(
             stagiaire=profil,

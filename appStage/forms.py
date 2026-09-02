@@ -6,7 +6,7 @@ from .models import Candidature, Departement, DocumentStage, Evaluation, Mission
 
 class CandidaturePubliqueForm(forms.ModelForm):
     """
-    Formulaire public de dépôt de candidature — remplace l'ancienne
+    Formulaire public de dépôt de candidature, remplace l'ancienne
     inscription libre. Aucun compte n'est créé ici : seul le RH, en
     acceptant la candidature, déclenche la création du compte stagiaire.
     """
@@ -14,7 +14,8 @@ class CandidaturePubliqueForm(forms.ModelForm):
     class Meta:
         model = Candidature
         fields = [
-            'nom_complet', 'email', 'telephone', 'poste_souhaite', 'departement_souhaite',
+            'nom_complet', 'email', 'telephone', 'poste_souhaite',
+            'filiere', 'annee_etude', 'departement_souhaite',
             'cv', 'lettre_motivation', 'piece_identite', 'avec_soutenance_souhaite',
         ]
         labels = {
@@ -22,6 +23,8 @@ class CandidaturePubliqueForm(forms.ModelForm):
             'email': "Adresse e-mail",
             'telephone': "Téléphone",
             'poste_souhaite': "Poste souhaité",
+            'filiere': "Filière",
+            'annee_etude': "Année d'étude actuelle",
             'departement_souhaite': "Département souhaité",
             'cv': "CV",
             'lettre_motivation': "Lettre de motivation",
@@ -30,7 +33,21 @@ class CandidaturePubliqueForm(forms.ModelForm):
         }
         widgets = {
             'departement_souhaite': forms.Select(attrs={'required': False}),
+            'annee_etude': forms.TextInput(attrs={'placeholder': "Ex : 3ème Année"}),
         }
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        deja_en_cours = Candidature.objects.filter(
+            email__iexact=email,
+            statut__in=[Candidature.Statut.EN_ATTENTE, Candidature.Statut.ACCEPTEE],
+        ).exists()
+        if deja_en_cours:
+            raise forms.ValidationError(
+                "Une candidature est déjà en cours avec cette adresse e-mail. "
+                "Inutile de la soumettre à nouveau : notre équipe RH la traitera prochainement."
+            )
+        return email
 
 
 class EvaluationForm(forms.ModelForm):

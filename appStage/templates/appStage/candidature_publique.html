@@ -9,21 +9,14 @@
 
 {% block content %}
 <main class="auth-page">
-  <div class="auth-card">
+  <div class="auth-card auth-card--form">
 
-    <section class="auth-showcase" aria-hidden="true">
+    <section class="auth-form-panel auth-form-panel--compact">
       <div class="auth-brand">
         <span class="brand-mark"><img src="{% static 'appStage/img/logo-bcb.png' %}" alt="BCB" class="brand-logo-img"></span>
         BCBStageFlow
       </div>
-      <div class="auth-visual"><img src="{% static 'appStage/img/bcb-siege.png' %}" alt="Siège de la BCB" class="auth-visual-img"></div>
-      <div class="auth-copy">
-        <h2>Postulez à un stage.</h2>
-        <p>Envoyez votre candidature avec vos documents. Notre équipe RH l'examinera et vous recontactera par e-mail.</p>
-      </div>
-    </section>
 
-    <section class="auth-form-panel auth-form-panel--compact">
       <h1>Déposer une candidature</h1>
       <p class="auth-subtitle">Aucun compte n'est nécessaire pour l'instant : vous en recevrez un par e-mail si votre candidature est acceptée.</p>
 
@@ -54,27 +47,41 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="{{ form.poste_souhaite.id_for_label }}">{{ form.poste_souhaite.label }}</label>
-          {{ form.poste_souhaite }}
-          {% for error in form.poste_souhaite.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.poste_souhaite.id_for_label }}">{{ form.poste_souhaite.label }}</label>
+            {{ form.poste_souhaite }}
+            {% for error in form.poste_souhaite.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.departement_souhaite.id_for_label }}">{{ form.departement_souhaite.label }}</label>
+            {{ form.departement_souhaite }}
+            <span class="form-hint">Facultatif : le RH pourra ajuster votre affectation finale.</span>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="{{ form.departement_souhaite.id_for_label }}">{{ form.departement_souhaite.label }}</label>
-          {{ form.departement_souhaite }}
-          <span class="form-hint">Facultatif : le RH pourra ajuster votre affectation finale.</span>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.filiere.id_for_label }}">{{ form.filiere.label }}</label>
+            {{ form.filiere }}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.annee_etude.id_for_label }}">{{ form.annee_etude.label }}</label>
+            {{ form.annee_etude }}
+            <span class="form-hint">Votre année d'étude actuelle, pas l'année de la candidature.</span>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="{{ form.cv.id_for_label }}">{{ form.cv.label }}</label>
-          {{ form.cv }}
-          <span class="form-hint">Format PDF de préférence.</span>
-        </div>
-
-        <div class="form-group">
-          <label for="{{ form.lettre_motivation.id_for_label }}">{{ form.lettre_motivation.label }}</label>
-          {{ form.lettre_motivation }}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.cv.id_for_label }}">{{ form.cv.label }}</label>
+            {{ form.cv }}
+            <span class="form-hint">Format PDF de préférence.</span>
+          </div>
+          <div class="form-group">
+            <label for="{{ form.lettre_motivation.id_for_label }}">{{ form.lettre_motivation.label }}</label>
+            {{ form.lettre_motivation }}
+          </div>
         </div>
 
         <div class="form-group">
