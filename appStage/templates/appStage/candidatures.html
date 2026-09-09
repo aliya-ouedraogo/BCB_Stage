@@ -2,7 +2,6 @@
 
 {% block title %}Candidatures - BCBStageFlow{% endblock %}
 {% block page_title %}Candidatures{% endblock %}
-{% block page_subtitle %}<span class="subtitle">Traitez les demandes de stage reçues.</span>{% endblock %}
 
 {% block page_css %}
 <style>
@@ -22,7 +21,12 @@
     <div class="candidature-card">
       <div class="candidature-head">
         <div class="candidature-identity">
-          <span class="avatar">{{ c.nom_complet|first }}</span>
+          <span class="avatar" style="position:relative;">
+            {{ c.nom_complet|first }}
+            {% if c.statut == 'EN_ATTENTE' %}
+              <span title="En attente de traitement" style="position:absolute; top:-4px; right:-4px; width:18px; height:18px; border-radius:50%; background:var(--color-danger, #dc2626); color:#fff; font-size:12px; font-weight:800; line-height:18px; text-align:center; box-shadow:0 0 0 2px #fff;">!</span>
+            {% endif %}
+          </span>
           <div>
             <div class="person-name">{{ c.nom_complet }}</div>
             <div class="person-role">{{ c.poste_souhaite }} &bull; {{ c.email }}{% if c.telephone %} &bull; {{ c.telephone }}{% endif %}</div>

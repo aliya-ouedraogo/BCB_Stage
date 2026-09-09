@@ -2,7 +2,6 @@
 
 {% block title %}Directeurs - BCBStageFlow{% endblock %}
 {% block page_title %}Directeurs{% endblock %}
-{% block page_subtitle %}<span class="subtitle">Tous les directeurs de service de l'organisation.</span>{% endblock %}
 
 {% block page_css %}
 <style>
@@ -14,11 +13,11 @@
 {% block dashboard_content %}
 
   <div class="panel" style="margin-bottom:20px;">
-    <div class="panel-title-row" style="cursor:pointer;" onclick="document.getElementById('form-creer-directeur').classList.toggle('open'); document.getElementById('fleche-creer-directeur').classList.toggle('is-open');">
-      <span class="panel-title" style="display:flex; align-items:center; gap:8px;">
-        <i data-lucide="user-plus"></i> Créer un compte directeur
-      </span>
-      <i data-lucide="chevron-down" id="fleche-creer-directeur" style="transition:transform 0.15s ease;{% if form.errors %} transform:rotate(180deg);{% endif %}"></i>
+    <div class="panel-title-row">
+      <span class="panel-title">Directeurs</span>
+      <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('form-creer-directeur').classList.toggle('open');">
+        <i data-lucide="plus"></i> Créer
+      </button>
     </div>
 
     <div class="form-creer-directeur{% if form.errors %} open{% endif %}" id="form-creer-directeur">
@@ -131,17 +130,6 @@
         });
         if (aucunResultat) aucunResultat.style.display = nbVisibles ? 'none' : '';
       });
-    })();
-  </script>
-
-  <script>
-    (function () {
-      var fleche = document.getElementById('fleche-creer-directeur');
-      var conteneur = document.getElementById('form-creer-directeur');
-      var observateur = new MutationObserver(function () {
-        fleche.style.transform = conteneur.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
-      });
-      observateur.observe(conteneur, { attributes: true, attributeFilter: ['class'] });
     })();
   </script>
 {% endblock %}

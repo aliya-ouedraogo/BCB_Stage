@@ -2,11 +2,6 @@
 
 {% block title %}Espace Directeur - BCBStageFlow{% endblock %}
 {% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;!{% endblock %}
-{% block page_subtitle %}
-  <span class="subtitle">
-    {% if departement %}Service {{ departement.nom }}{% else %}Vous n'êtes rattaché(e) à aucun département pour le moment.{% endif %}
-  </span>
-{% endblock %}
 
 {% block dashboard_content %}
 

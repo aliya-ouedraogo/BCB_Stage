@@ -2,7 +2,6 @@
 
 {% block title %}Services - BCBStageFlow{% endblock %}
 {% block page_title %}Services{% endblock %}
-{% block page_subtitle %}<span class="subtitle">Les services/départements de l'organisation, utilisés pour l'affectation des stagiaires.</span>{% endblock %}
 
 {% block page_css %}
 <style>
@@ -14,11 +13,11 @@
 {% block dashboard_content %}
 
   <div class="panel" style="margin-bottom:20px;">
-    <div class="panel-title-row" style="cursor:pointer;" onclick="document.getElementById('form-creer-departement').classList.toggle('open'); document.getElementById('fleche-creer-departement').classList.toggle('is-open');">
-      <span class="panel-title" style="display:flex; align-items:center; gap:8px;">
-        <i data-lucide="plus"></i> Créer un service
-      </span>
-      <i data-lucide="chevron-down" id="fleche-creer-departement" style="transition:transform 0.15s ease;{% if form.errors %} transform:rotate(180deg);{% endif %}"></i>
+    <div class="panel-title-row">
+      <span class="panel-title">Services</span>
+      <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('form-creer-departement').classList.toggle('open');">
+        <i data-lucide="plus"></i> Créer
+      </button>
     </div>
 
     <div class="form-creer-departement{% if form.errors %} open{% endif %}" id="form-creer-departement">
@@ -105,14 +104,4 @@
     })();
   </script>
 
-  <script>
-    (function () {
-      var fleche = document.getElementById('fleche-creer-departement');
-      var conteneur = document.getElementById('form-creer-departement');
-      var observateur = new MutationObserver(function () {
-        fleche.style.transform = conteneur.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
-      });
-      observateur.observe(conteneur, { attributes: true, attributeFilter: ['class'] });
-    })();
-  </script>
 {% endblock %}

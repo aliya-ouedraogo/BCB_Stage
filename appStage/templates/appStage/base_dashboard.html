@@ -23,8 +23,11 @@
       <nav class="sidebar-nav">
         {% for item in nav_items %}
           <a href="{% url item.url_name %}"
-             class="nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}">
+             class="nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}" style="position:relative;">
             <i data-lucide="{{ item.icon }}"></i> {{ item.label }}
+            {% if item.badge %}
+              <span class="badge badge-danger" style="margin-left:auto; min-width:20px; height:20px; border-radius:10px; font-size:11px; font-weight:700; padding:0 6px; display:inline-flex; align-items:center; justify-content:center;">{{ item.badge }}</span>
+            {% endif %}
           </a>
         {% endfor %}
       </nav>
@@ -105,9 +108,12 @@
 <nav class="bottom-nav">
   {% for item in nav_items %}
     <a href="{% url item.url_name %}"
-       class="bottom-nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}">
+       class="bottom-nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}" style="position:relative;">
       <i data-lucide="{{ item.icon }}"></i>
       <span>{{ item.label }}</span>
+      {% if item.badge %}
+        <span class="badge badge-danger" style="position:absolute; top:2px; right:14px; min-width:16px; height:16px; border-radius:8px; font-size:10px; font-weight:700; padding:0 4px; display:inline-flex; align-items:center; justify-content:center;">{{ item.badge }}</span>
+      {% endif %}
     </a>
   {% endfor %}
 </nav>
