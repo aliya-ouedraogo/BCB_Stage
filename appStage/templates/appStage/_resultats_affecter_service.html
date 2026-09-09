@@ -1,5 +1,7 @@
 {% for stage in stages %}
-  <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link">
+  <form method="post" class="person-row" style="flex-wrap:wrap;">
+    {% csrf_token %}
+    <input type="hidden" name="stage_id" value="{{ stage.id }}">
     {% if stage.stagiaire.user.photo %}
       <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
     {% else %}
@@ -7,12 +9,11 @@
     {% endif %}
     <div class="person-info">
       <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
-      <span class="person-role">{{ stage.departement.nom }}{% if stage.maitre_de_stage %} &bull; {{ stage.maitre_de_stage.user.get_full_name }}{% endif %}</span>
+      <span class="person-role">
+        {{ stage.intitule_poste }}
+        {% if stage.maitre_de_stage %} &bull; {{ stage.maitre_de_stage.user.get_full_name }}{% endif %}
+      </span>
     </div>
-    <span class="person-dates">{{ stage.date_debut|date:"d M Y" }} - {{ stage.date_fin|date:"d M Y" }}</span>
-    {% if stage.statut == 'EN_COURS' %}
-      <span class="chip" style="min-width:52px; text-align:center;">{{ stage.progression_pourcentage }}%</span>
-    {% endif %}
     {% if stage.statut == 'EN_COURS' %}
       <span class="badge badge-success">En cours</span>
     {% elif stage.statut == 'TERMINE' %}
@@ -20,11 +21,16 @@
     {% else %}
       <span class="badge badge-info">{{ stage.get_statut_display }}</span>
     {% endif %}
-    <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--color-text-faint);margin-left:8px;"></i>
-  </a>
+    <select name="departement" class="form-select" required style="max-width:220px;">
+      {% for dep in departements %}
+        <option value="{{ dep.id }}" {% if dep.id == stage.departement_id %}selected{% endif %}>{{ dep.nom }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+  </form>
 {% empty %}
   <p style="color:var(--color-text-muted); font-size:14px;">
-    {% if recherche or filtre_statut %}Aucun stagiaire ne correspond à cette recherche.{% else %}Aucun stagiaire enregistré.{% endif %}
+    {% if recherche %}Aucun stagiaire ne correspond à cette recherche.{% else %}Aucun stagiaire enregistré.{% endif %}
   </p>
 {% endfor %}
 {% if total_stagiaires > limite %}

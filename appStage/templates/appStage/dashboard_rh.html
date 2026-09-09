@@ -8,27 +8,29 @@
 
   {% if stages_periode_depassee or stages_fin_proche %}
     <div class="alert-banner-stack">
-      {% if stages_periode_depassee %}
-        <a href="{% url 'appStage:liste_stagiaires' %}" class="alert-banner alert-banner--danger">
+      {% for stage in stages_periode_depassee %}
+        <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="alert-banner alert-banner--danger">
           <span class="alert-banner-dot"></span>
           <span>
-            <strong>{{ stages_periode_depassee|length }} stage{{ stages_periode_depassee|length|pluralize }}</strong>
-            {{ stages_periode_depassee|length|pluralize:"a dépassé,ont dépassé" }} sa date de fin et
-            {{ stages_periode_depassee|length|pluralize:"doit être clôturé,doivent être clôturés" }}.
+            <strong>{{ stage.stagiaire.user.get_full_name }}</strong>
+            : date de fin dépassée de {{ stage.jours_restants|cut:"-" }} jour{{ stage.jours_restants|cut:"-"|pluralize }}, stage à clôturer.
           </span>
           <span class="alert-banner-arrow"><i data-lucide="arrow-right"></i></span>
         </a>
-      {% endif %}
-      {% if stages_fin_proche %}
-        <a href="{% url 'appStage:liste_stagiaires' %}" class="alert-banner alert-banner--warning">
+      {% endfor %}
+      {% for stage in stages_fin_proche %}
+        <a href="{% url 'appStage:fiche_stagiaire' stage.id %}"
+          class="alert-banner {% if stage.jours_restants <= 3 %}alert-banner--danger{% else %}alert-banner--warning{% endif %}">
           <span class="alert-banner-dot"></span>
           <span>
-            <strong>{{ stages_fin_proche|length }} stage{{ stages_fin_proche|length|pluralize }}</strong>
-            se termine{{ stages_fin_proche|length|pluralize:",nt" }} dans moins de 10 jours — pensez aux départs à préparer.
+            <strong>{{ stage.stagiaire.user.get_full_name }}</strong>
+            :
+            {% if stage.jours_restants == 0 %}termine son stage aujourd'hui.
+            {% else %}termine son stage dans {{ stage.jours_restants }} jour{{ stage.jours_restants|pluralize }}.{% endif %}
           </span>
           <span class="alert-banner-arrow"><i data-lucide="arrow-right"></i></span>
         </a>
-      {% endif %}
+      {% endfor %}
     </div>
   {% endif %}
 

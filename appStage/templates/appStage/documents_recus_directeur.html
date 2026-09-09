@@ -1,0 +1,110 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Documents - BCBStageFlow{% endblock %}
+{% block page_title %}Documents{% endblock %}
+{% block page_subtitle %}
+  <span class="subtitle">
+    {% if departement %}Documents liés aux stagiaires de {{ departement.nom }}.{% else %}Vous n'êtes rattaché(e) à aucun département pour le moment.{% endif %}
+  </span>
+{% endblock %}
+
+{% block page_css %}
+<style>
+  .doc-accordion summary { position: relative; }
+  .doc-accordion summary::-webkit-details-marker { display: none; }
+  .doc-accordion summary::marker { content: ""; }
+  .doc-accordion .count-badge {
+    min-width: 24px; height: 24px; border-radius: 50%;
+    background: var(--color-primary); color: #fff; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+  .doc-accordion .doc-accordion-toggle [data-lucide] { width: 14px; height: 14px; transition: transform 0.15s ease; }
+  .doc-accordion[open] .doc-accordion-toggle [data-lucide] { transform: rotate(180deg); }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+  {% if departement %}
+  <form method="get" id="form-recherche-documents" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px; margin-bottom:4px;">
+    <input type="hidden" name="onglet" id="champ-onglet-documents" value="{{ onglet }}">
+    <input type="hidden" name="limite" id="champ-limite-documents" value="{{ limite }}">
+    <div class="input-icon-wrap" style="max-width:560px; width:100%; position:relative;">
+      <i data-lucide="search"></i>
+      <input type="search" name="q" id="champ-recherche-documents" value="{{ recherche }}" placeholder="Rechercher un stagiaire..." autocomplete="off">
+      <span id="indicateur-recherche-documents" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11.5px; color:var(--color-text-muted); opacity:0; transition:opacity 0.15s ease; pointer-events:none;">recherche…</span>
+    </div>
+    <div class="tab-group">
+      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}onglet=recus" class="tab-item onglet-lien {% if onglet == 'recus' %}active{% endif %}" data-onglet="recus">Documents reçus</a>
+      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}onglet=envoyes" class="tab-item onglet-lien {% if onglet == 'envoyes' %}active{% endif %}" data-onglet="envoyes">Documents envoyés</a>
+    </div>
+  </form>
+
+  <div class="panel">
+    <div id="resultats-documents">
+      {% include "appStage/_resultats_documents_directeur.html" %}
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('champ-recherche-documents');
+      var form = document.getElementById('form-recherche-documents');
+      var resultats = document.getElementById('resultats-documents');
+      var indicateur = document.getElementById('indicateur-recherche-documents');
+      var champLimite = document.getElementById('champ-limite-documents');
+      var champOnglet = document.getElementById('champ-onglet-documents');
+      if (!champ || !form || !resultats) return;
+
+      if (champ.value) {
+        champ.focus();
+        var val = champ.value;
+        champ.value = '';
+        champ.value = val;
+      }
+
+      function rafraichirResultats() {
+        var params = new URLSearchParams(new FormData(form));
+        var url = window.location.pathname + '?' + params.toString();
+        if (indicateur) indicateur.style.opacity = '1';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(function (reponse) { return reponse.text(); })
+          .then(function (html) {
+            resultats.innerHTML = html;
+            if (window.lucide) window.lucide.createIcons();
+            window.history.replaceState(null, '', url);
+          })
+          .catch(function () {})
+          .finally(function () { if (indicateur) indicateur.style.opacity = '0'; });
+      }
+
+      var minuteur = null;
+      champ.addEventListener('input', function () {
+        if (champLimite) champLimite.value = 10;
+        clearTimeout(minuteur);
+        minuteur = setTimeout(rafraichirResultats, 300);
+      });
+
+      // Onglets : on évite le rechargement complet de la page en interceptant le clic.
+      document.querySelectorAll('.onglet-lien').forEach(function (lien) {
+        lien.addEventListener('click', function (evenement) {
+          evenement.preventDefault();
+          document.querySelectorAll('.onglet-lien').forEach(function (l) { l.classList.remove('active'); });
+          lien.classList.add('active');
+          if (champOnglet) champOnglet.value = lien.dataset.onglet;
+          if (champLimite) champLimite.value = 10;
+          rafraichirResultats();
+        });
+      });
+
+      resultats.addEventListener('click', function (evenement) {
+        var bouton = evenement.target.closest('.btn-voir-plus');
+        if (!bouton) return;
+        if (champLimite) champLimite.value = parseInt(bouton.dataset.limiteActuelle || '10', 10) + 10;
+        rafraichirResultats();
+      });
+    })();
+  </script>
+  {% endif %}
+
+{% endblock %}

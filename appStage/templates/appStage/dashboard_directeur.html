@@ -1,0 +1,105 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Espace Directeur - BCBStageFlow{% endblock %}
+{% block page_title %}Bonjour, {{ user.first_name|default:user.username }}&nbsp;!{% endblock %}
+{% block page_subtitle %}
+  <span class="subtitle">
+    {% if departement %}Service {{ departement.nom }}{% else %}Vous n'êtes rattaché(e) à aucun département pour le moment.{% endif %}
+  </span>
+{% endblock %}
+
+{% block dashboard_content %}
+
+  {% if not departement %}
+    <div class="empty-state">
+      <i data-lucide="building-2"></i>
+      <h2>Aucun département rattaché</h2>
+      <p>Contactez le service RH pour être associé(e) à un département.</p>
+    </div>
+  {% else %}
+
+  {% if nb_a_traiter %}
+    <div class="app-message app-message--warning" style="margin-bottom:20px;">
+      <i data-lucide="user-plus" style="width:15px;height:15px; vertical-align:-2px;"></i>
+      {{ nb_a_traiter }} stagiaire{{ nb_a_traiter|pluralize }} de votre service n'{{ nb_a_traiter|pluralize:"a,ont" }} pas encore de maître de stage.
+      <a href="{% url 'appStage:affecter_maitre_stage' %}" style="font-weight:600; margin-left:4px;">Y remédier</a>
+    </div>
+  {% endif %}
+
+  <div class="dash-grid">
+    <div class="dash-col">
+      <div class="panel">
+        <div class="panel-title-row">
+          <span class="panel-title">Stagiaires du service ({{ stages_service|length }})</span>
+          <a href="{% url 'appStage:affecter_maitre_stage' %}" class="btn btn-outline btn-sm">
+            <i data-lucide="user-check"></i> Affecter un maître de stage
+          </a>
+        </div>
+        {% for stage in stages_service %}
+          <div class="person-row">
+            {% if stage.stagiaire.user.photo %}
+              <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
+            {% else %}
+              <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
+            {% endif %}
+            <div class="person-info">
+              <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
+              <span class="person-role">{{ stage.intitule_poste }}</span>
+            </div>
+            {% if stage.maitre_de_stage %}
+              <span class="badge badge-success">{{ stage.maitre_de_stage.user.get_full_name }}</span>
+            {% else %}
+              <span class="badge badge-warning">Sans maître de stage</span>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p style="color:var(--color-text-muted); font-size:14px;">Aucun stagiaire actif dans votre service pour le moment.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="dash-col">
+      <div class="panel">
+        <div class="panel-title-row">
+          <span class="panel-title">Propositions en attente de réponse</span>
+        </div>
+        {% for demande in demandes_en_attente %}
+          <div class="todo-item">
+            <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
+              <i data-lucide="clock"></i>
+            </span>
+            <div class="todo-content" style="flex:1;">
+              <div class="todo-title">{{ demande.stage.stagiaire.user.get_full_name }}</div>
+              <div class="todo-desc">Proposé à {{ demande.maitre_de_stage_demande.user.get_full_name }}, en attente de sa réponse</div>
+            </div>
+          </div>
+        {% empty %}
+          <p style="color:var(--color-text-muted); font-size:14px;">Aucune proposition en attente.</p>
+        {% endfor %}
+      </div>
+
+      <div class="panel" style="margin-top:18px;">
+        <div class="panel-title-row">
+          <span class="panel-title">Documents récents</span>
+          <a href="{% url 'appStage:documents_recus_directeur' %}" class="list-cta" style="text-decoration:none;">Tout voir</a>
+        </div>
+        {% for doc in documents_recents %}
+          <div class="doc-row">
+            <span class="doc-icon doc-icon--doc"><i data-lucide="file"></i></span>
+            <div class="doc-info" style="flex:1;">
+              <div class="doc-name">{{ doc.nom }}</div>
+              <div class="doc-meta">{{ doc.stage.stagiaire.user.get_full_name }} &bull; {{ doc.date_ajout|timesince }}</div>
+            </div>
+            {% if doc.fichier %}
+              <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i></a>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p style="color:var(--color-text-muted); font-size:14px;">Aucun document déposé pour le moment.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+{% endblock %}

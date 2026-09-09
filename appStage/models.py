@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
+import datetime
 
 validateur_telephone_bf = RegexValidator(
     regex=r'^\+226[0-9]{8}$',
@@ -37,6 +38,7 @@ class User(AbstractUser):
         STAGIAIRE = 'STAGIAIRE', 'Stagiaire'
         RH = 'RH', 'Ressources Humaines'
         MAITRE_STAGE = 'MAITRE_STAGE', 'Maître de Stage'
+        DIRECTEUR = 'DIRECTEUR', 'Directeur de Service'
 
     role = models.CharField(max_length=20, choices=Role.choices)
     telephone = models.CharField(max_length=20, blank=True)
@@ -51,6 +53,7 @@ class User(AbstractUser):
             self.Role.STAGIAIRE: 'appStage:dashboard_stagiaire',
             self.Role.RH: 'appStage:dashboard_rh',
             self.Role.MAITRE_STAGE: 'appStage:dashboard_tuteur',
+            self.Role.DIRECTEUR: 'appStage:dashboard_directeur',
         }.get(self.role, 'appStage:onboarding')
 
 
@@ -102,6 +105,167 @@ class ProfilMaitreStage(models.Model):
     def __str__(self):
         return str(self.user)
 
+    @property
+    def nb_stagiaires_encadres(self):
+        return self.stages_encadres.filter(statut=Stage.Statut.EN_COURS).count()
+
+    @classmethod
+    def creer_et_inviter(cls, nom_complet, email, poste='', departement_affiliation=''):
+        """
+        Crée un compte tuteur (sans mot de passe utilisable) et lui envoie un
+        email d'activation à usage unique, sur le même principe que
+        Candidature.accepter() pour les stagiaires. Tout est fait dans une
+        seule transaction : en cas d'échec à n'importe quelle étape (compte
+        déjà existant, erreur d'envoi d'e-mail...), rien n'est enregistré en
+        base — pas de compte orphelin sans profil, ni de profil sans compte.
+        """
+        from django.db import transaction
+
+        parties_nom = nom_complet.strip().split(' ', 1)
+        base = ''.join(nom_complet.lower().split())
+
+        with transaction.atomic():
+            username, n = base, 1
+            while User.objects.filter(username=username).exists():
+                n += 1
+                username = f"{base}{n}"
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=parties_nom[0],
+                last_name=parties_nom[1] if len(parties_nom) > 1 else '',
+                role=User.Role.MAITRE_STAGE,
+            )
+            user.set_unusable_password()
+            user.save()
+
+            # NB : la création de `user` ci-dessus déclenche le signal
+            # `creer_profil_automatiquement` (signals.py), qui crée déjà un
+            # ProfilMaitreStage vide pour ce user. On le récupère et on le
+            # complète ici, plutôt que d'en créer un second (ce qui violait
+            # la contrainte d'unicité sur `user` et provoquait un IntegrityError
+            # à chaque création, quel que soit l'utilisateur).
+            profil, _ = cls.objects.get_or_create(user=user)
+            profil.poste = poste
+            profil.departement_affiliation = departement_affiliation
+            profil.save()
+
+            from django.contrib.auth.tokens import default_token_generator
+            from django.core.mail import send_mail
+            from django.conf import settings as dj_settings
+            from django.urls import reverse
+            from django.utils.encoding import force_bytes
+            from django.utils.http import urlsafe_base64_encode
+
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            lien_relatif = reverse('appStage:activer_compte', kwargs={'uidb64': uidb64, 'token': token})
+            lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
+
+            send_mail(
+                subject="Votre compte tuteur - BCBStageFlow",
+                message=(
+                    f"Bonjour {nom_complet},\n\n"
+                    f"Un compte tuteur de stage vient d'être créé pour vous sur BCBStageFlow.\n\n"
+                    f"Pour y accéder, définissez votre mot de passe en suivant ce lien "
+                    f"(valable 48 heures) :\n{lien_complet}\n\n"
+                    f"L'équipe BCBStageFlow"
+                ),
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+        return profil
+
+
+class ProfilDirecteur(models.Model):
+    """
+    Directeur d'un service/département. Un directeur ne dirige qu'un
+    seul département (relation directe Departement -> ProfilDirecteur,
+    voir champ Departement.directeur).
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil_directeur'
+    )
+    poste = models.CharField(max_length=150, blank=True)
+
+    def __str__(self):
+        return str(self.user)
+
+    @property
+    def departement_dirige(self):
+        return getattr(self, 'departement', None)
+
+    @classmethod
+    def creer_et_inviter(cls, nom_complet, email, departement, poste=''):
+        """
+        Crée un compte directeur (sans mot de passe utilisable), le rattache
+        au département fourni, et lui envoie un email d'activation à usage
+        unique — même principe que ProfilMaitreStage.creer_et_inviter().
+        """
+        from django.db import transaction
+
+        parties_nom = nom_complet.strip().split(' ', 1)
+        base = ''.join(nom_complet.lower().split())
+
+        with transaction.atomic():
+            username, n = base, 1
+            while User.objects.filter(username=username).exists():
+                n += 1
+                username = f"{base}{n}"
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=parties_nom[0],
+                last_name=parties_nom[1] if len(parties_nom) > 1 else '',
+                role=User.Role.DIRECTEUR,
+            )
+            user.set_unusable_password()
+            user.save()
+
+            # Le signal creer_profil_automatiquement a déjà créé un profil
+            # vide pour ce user : on le récupère plutôt que d'en recréer un
+            # second (contrainte d'unicité sur `user`).
+            profil, _ = cls.objects.get_or_create(user=user)
+            profil.poste = poste
+            profil.save()
+
+            departement.directeur = profil
+            departement.save(update_fields=['directeur'])
+
+            from django.contrib.auth.tokens import default_token_generator
+            from django.core.mail import send_mail
+            from django.conf import settings as dj_settings
+            from django.urls import reverse
+            from django.utils.encoding import force_bytes
+            from django.utils.http import urlsafe_base64_encode
+
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            lien_relatif = reverse('appStage:activer_compte', kwargs={'uidb64': uidb64, 'token': token})
+            lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
+
+            send_mail(
+                subject="Votre compte directeur - BCBStageFlow",
+                message=(
+                    f"Bonjour {nom_complet},\n\n"
+                    f"Un compte directeur de service vient d'être créé pour vous sur BCBStageFlow, "
+                    f"pour le département « {departement.nom} ».\n\n"
+                    f"Pour y accéder, définissez votre mot de passe en suivant ce lien "
+                    f"(valable 48 heures) :\n{lien_complet}\n\n"
+                    f"L'équipe BCBStageFlow"
+                ),
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+        return profil
+
 
 # =========================================================
 # Structure organisationnelle
@@ -110,6 +274,9 @@ class ProfilMaitreStage(models.Model):
 class Departement(models.Model):
     nom = models.CharField(max_length=150)
     agence = models.CharField(max_length=150, blank=True, help_text="Ville / agence de rattachement.")
+    directeur = models.OneToOneField(
+        ProfilDirecteur, on_delete=models.SET_NULL, null=True, blank=True, related_name='departement'
+    )
 
     class Meta:
         ordering = ['nom']
@@ -231,6 +398,7 @@ class Candidature(models.Model):
         self.save()
 
         lien_activation = self._envoyer_email_activation(user)
+        stage.notifier_directeur_affectation()
 
         return user, stage, lien_activation
 
@@ -382,11 +550,44 @@ class Stage(models.Model):
 
     @property
     def taux_presence(self):
-        total = self.presences.count()
+        """
+        À appeler seulement après synchroniser_presences(). Ne compte QUE les
+        jours confirmés par le tuteur (valide_par_tuteur=True) : sans ça, un
+        stagiaire pourrait afficher un taux flatteur simplement en pointant
+        sans jamais se faire réellement valider — ce qui viderait de son
+        sens tout le système de confirmation.
+        """
+        confirmees = self.presences.filter(valide_par_tuteur=True)
+        total = confirmees.count()
         if not total:
             return None
-        presents = self.presences.filter(present=True).count()
+        presents = confirmees.filter(present=True).count()
         return round((presents / total) * 100)
+
+    def synchroniser_presences(self):
+        """
+        Crée une Presence 'absente' pour chaque jour ouvré déjà écoulé
+        (jusqu'à hier — délai de grâce jusqu'à minuit pour pointer) sans
+        aucun enregistrement. À appeler avant toute lecture de taux_presence
+        ou de la liste des présences, pour que les jours ignorés comptent
+        vraiment comme des absences plutôt que d'être simplement absents
+        du calcul.
+        """
+        if self.statut not in (self.Statut.EN_COURS, self.Statut.TERMINE):
+            return
+        aujourdhui = timezone.now().date()
+        dernier_jour = min(aujourdhui - datetime.timedelta(days=1), self.date_fin)
+        if dernier_jour < self.date_debut:
+            return
+        jours_existants = set(self.presences.values_list('date', flat=True))
+        a_creer = []
+        jour = self.date_debut
+        while jour <= dernier_jour:
+            if jour.weekday() < 5 and jour not in jours_existants:  # jours ouvrés seulement
+                a_creer.append(Presence(stage=self, date=jour, present=False, justifie=False))
+            jour += datetime.timedelta(days=1)
+        if a_creer:
+            Presence.objects.bulk_create(a_creer, ignore_conflicts=True)
 
     @property
     def jours_restants(self):
@@ -413,6 +614,43 @@ class Stage(models.Model):
     def jours_avant_debut(self):
         return (self.date_debut - timezone.now().date()).days
 
+    def notifier_directeur_affectation(self):
+        """
+        Prévient par email (et via une Notification in-app) le directeur du
+        département auquel ce stagiaire vient d'être affecté par le RH, pour
+        qu'il choisisse à son tour un maître de stage. N'empêche jamais
+        l'affectation elle-même si l'envoi échoue (fail_silently).
+        """
+        directeur = getattr(self.departement, 'directeur', None)
+        if not directeur or not directeur.user_id:
+            return
+
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        from django.urls import reverse
+
+        Notification.creer(
+            destinataire=directeur.user,
+            message=f"{self.stagiaire.user.get_full_name()} a été affecté(e) à votre service. "
+                    f"Choisissez-lui un maître de stage.",
+            lien=reverse('appStage:affecter_maitre_stage'),
+        )
+
+        lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:affecter_maitre_stage')}"
+        send_mail(
+            subject="Nouveau stagiaire affecté à votre service - BCBStageFlow",
+            message=(
+                f"Bonjour {directeur.user.get_full_name()},\n\n"
+                f"{self.stagiaire.user.get_full_name()} vient d'être affecté(e) à votre service "
+                f"({self.departement.nom}) pour le poste de {self.intitule_poste}.\n\n"
+                f"Merci de lui choisir un maître de stage :\n{lien_complet}\n\n"
+                f"L'équipe BCBStageFlow"
+            ),
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[directeur.user.email],
+            fail_silently=True,
+        )
+
     @classmethod
     def synchroniser_statuts(cls):
         """
@@ -438,9 +676,10 @@ class Stage(models.Model):
 
 class DemandeEncadrement(models.Model):
     """
-    Classe-association entre Stage et ProfilMaitreStage : matérialise
-    la demande du stagiaire à un tuteur potentiel, que celui-ci accepte
-    ou refuse depuis son propre tableau de bord.
+    Classe-association entre Stage et ProfilMaitreStage : matérialise la
+    proposition d'encadrement faite par le directeur du service à un tuteur
+    potentiel, que celui-ci accepte ou refuse depuis son propre tableau de
+    bord (l'affectation n'est effective qu'après acceptation du tuteur).
     """
 
     class Statut(models.TextChoices):
@@ -452,6 +691,10 @@ class DemandeEncadrement(models.Model):
     maitre_de_stage_demande = models.ForeignKey(
         ProfilMaitreStage, on_delete=models.CASCADE, related_name='demandes_recues'
     )
+    proposee_par = models.ForeignKey(
+        ProfilDirecteur, on_delete=models.SET_NULL, null=True, blank=True, related_name='propositions_encadrement',
+        help_text="Directeur de service à l'origine de la proposition.",
+    )
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
     date_demande = models.DateTimeField(auto_now_add=True)
     date_reponse = models.DateTimeField(null=True, blank=True)
@@ -462,17 +705,87 @@ class DemandeEncadrement(models.Model):
     def __str__(self):
         return f"Demande {self.stage.stagiaire} → {self.maitre_de_stage_demande}"
 
+    def notifier_tuteur(self):
+        """Email + notification in-app envoyés au tuteur pressenti, dès la création de la demande."""
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        from django.urls import reverse
+
+        tuteur_user = self.maitre_de_stage_demande.user
+        Notification.creer(
+            destinataire=tuteur_user,
+            message=f"On vous propose d'encadrer {self.stage.stagiaire.user.get_full_name()}.",
+            lien=reverse('appStage:dashboard_tuteur'),
+        )
+        lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:dashboard_tuteur')}"
+        send_mail(
+            subject="Proposition d'encadrement - BCBStageFlow",
+            message=(
+                f"Bonjour {tuteur_user.get_full_name()},\n\n"
+                f"Le directeur du service {self.stage.departement.nom} vous propose d'encadrer "
+                f"{self.stage.stagiaire.user.get_full_name()} ({self.stage.intitule_poste}).\n\n"
+                f"Pour accepter ou refuser :\n{lien_complet}\n\n"
+                f"L'équipe BCBStageFlow"
+            ),
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[tuteur_user.email],
+            fail_silently=True,
+        )
+
     def accepter(self):
         self.statut = self.Statut.ACCEPTEE
         self.date_reponse = timezone.now()
         self.save()
         self.stage.maitre_de_stage = self.maitre_de_stage_demande
         self.stage.save(update_fields=['maitre_de_stage'])
+        self._notifier_reponse(acceptee=True)
 
     def refuser(self):
         self.statut = self.Statut.REFUSEE
         self.date_reponse = timezone.now()
         self.save()
+        self._notifier_reponse(acceptee=False)
+
+    def _notifier_reponse(self, acceptee):
+        """Prévient le stagiaire et le directeur de la décision du tuteur."""
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+
+        tuteur_nom = self.maitre_de_stage_demande.user.get_full_name()
+        stagiaire_user = self.stage.stagiaire.user
+        directeur = getattr(self.stage.departement, 'directeur', None)
+
+        if acceptee:
+            message_stagiaire = f"{tuteur_nom} est désormais votre maître de stage."
+            message_directeur = f"{tuteur_nom} a accepté d'encadrer {stagiaire_user.get_full_name()}."
+        else:
+            message_stagiaire = f"{tuteur_nom} n'a pas pu accepter de vous encadrer. Votre directeur va vous proposer un autre tuteur."
+            message_directeur = f"{tuteur_nom} a refusé d'encadrer {stagiaire_user.get_full_name()} : choisissez un autre tuteur."
+
+        from django.urls import reverse
+
+        Notification.creer(destinataire=stagiaire_user, message=message_stagiaire)
+        if directeur and directeur.user_id:
+            Notification.creer(
+                destinataire=directeur.user, message=message_directeur,
+                lien=reverse('appStage:affecter_maitre_stage'),
+            )
+            send_mail(
+                subject="Réponse à une proposition d'encadrement - BCBStageFlow",
+                message=f"Bonjour {directeur.user.get_full_name()},\n\n{message_directeur}\n\nL'équipe BCBStageFlow",
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[directeur.user.email],
+                fail_silently=True,
+            )
+
+        if stagiaire_user.email:
+            send_mail(
+                subject="Votre encadrement de stage - BCBStageFlow",
+                message=f"Bonjour {stagiaire_user.get_full_name()},\n\n{message_stagiaire}\n\nL'équipe BCBStageFlow",
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[stagiaire_user.email],
+                fail_silently=True,
+            )
 
 
 class Entretien(models.Model):
@@ -548,6 +861,34 @@ class Mission(models.Model):
     def __str__(self):
         return self.titre
 
+    def notifier_stagiaire(self):
+        """Email + notification in-app au stagiaire dès qu'une mission lui est assignée."""
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        from django.urls import reverse
+
+        stagiaire_user = self.stage.stagiaire.user
+        lien_relatif = reverse('appStage:mes_missions')
+        Notification.creer(
+            destinataire=stagiaire_user,
+            message=f"Nouvelle mission assignée : « {self.titre} ».",
+            lien=lien_relatif,
+        )
+        if stagiaire_user.email:
+            send_mail(
+                subject="Nouvelle mission assignée - BCBStageFlow",
+                message=(
+                    f"Bonjour {stagiaire_user.get_full_name()},\n\n"
+                    f"Une nouvelle mission vous a été assignée : « {self.titre} ».\n\n"
+                    f"{('Description : ' + self.description) if self.description else ''}\n\n"
+                    f"Consultez-la ici :\n{dj_settings.SITE_URL}{lien_relatif}\n\n"
+                    f"L'équipe BCBStageFlow"
+                ),
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[stagiaire_user.email],
+                fail_silently=True,
+            )
+
 
 class RapportHebdomadaire(models.Model):
     class Statut(models.TextChoices):
@@ -578,6 +919,10 @@ class Presence(models.Model):
     date = models.DateField()
     present = models.BooleanField(default=True)
     justifie = models.BooleanField(default=False)
+    note_activite = models.CharField(
+        max_length=280, blank=True,
+        help_text="Courte description de ce qui a été fait ce jour-là, saisie par le stagiaire au moment de pointer.",
+    )
     valide_par_tuteur = models.BooleanField(
         default=False, help_text="Auto-déclarée par le stagiaire, puis confirmée par le maître de stage."
     )
@@ -646,3 +991,72 @@ class DocumentStage(models.Model):
 
     def __str__(self):
         return self.nom
+
+    def notifier_depot_stagiaire(self):
+        """
+        Prévient par email (et via une Notification in-app) le directeur du
+        service et, s'il est déjà assigné, le maître de stage, dès qu'un
+        stagiaire dépose un document (ex. rapport de stage). N'empêche
+        jamais le dépôt si l'envoi échoue (fail_silently).
+        """
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        from django.urls import reverse
+
+        stage = self.stage
+        lien_relatif = reverse('appStage:fiche_stagiaire', kwargs={'stage_id': stage.id}) + '#documents'
+        lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
+        stagiaire_nom = stage.stagiaire.user.get_full_name()
+
+        destinataires_users = []
+        directeur = getattr(stage.departement, 'directeur', None)
+        if directeur and directeur.user_id:
+            destinataires_users.append(directeur.user)
+        if stage.maitre_de_stage_id and stage.maitre_de_stage.user_id:
+            destinataires_users.append(stage.maitre_de_stage.user)
+
+        for destinataire_user in destinataires_users:
+            Notification.creer(
+                destinataire=destinataire_user,
+                message=f"{stagiaire_nom} a déposé un document : « {self.nom} ».",
+                lien=lien_relatif,
+            )
+            if destinataire_user.email:
+                send_mail(
+                    subject="Nouveau document déposé - BCBStageFlow",
+                    message=(
+                        f"Bonjour {destinataire_user.get_full_name()},\n\n"
+                        f"{stagiaire_nom} vient de déposer un document : « {self.nom} ».\n\n"
+                        f"Pour le consulter :\n{lien_complet}\n\n"
+                        f"L'équipe BCBStageFlow"
+                    ),
+                    from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[destinataire_user.email],
+                    fail_silently=True,
+                )
+
+
+class Notification(models.Model):
+    """
+    Notification in-app minimale, affichée dans la cloche du tableau de
+    bord. Vient en complément des emails (canal principal) envoyés par les
+    méthodes métier ci-dessus — jamais en remplacement.
+    """
+
+    destinataire = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications'
+    )
+    message = models.CharField(max_length=255)
+    lien = models.CharField(max_length=255, blank=True, help_text="Chemin relatif vers lequel rediriger au clic.")
+    lu = models.BooleanField(default=False)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"{self.destinataire} • {self.message[:40]}"
+
+    @classmethod
+    def creer(cls, destinataire, message, lien=''):
+        return cls.objects.create(destinataire=destinataire, message=message, lien=lien)

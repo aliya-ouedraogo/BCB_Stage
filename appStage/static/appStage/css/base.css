@@ -59,7 +59,7 @@ input:focus-visible,
   background: var(--color-ink);
   color: #fff;
 }
-.btn-primary:hover { background: #000; }
+.btn-primary:hover { background: var(--color-ink-hover); }
 
 .btn-secondary {
   background: #f0f0f2;
@@ -76,6 +76,10 @@ input:focus-visible,
 
 .btn-danger-soft { background: #c0392b; color: #fff; border: none; }
 .btn-danger-soft:hover { background: #a8321f; }
+.btn-warning-soft { background: var(--color-warning-bg); color: #92400e; border: none; }
+.btn-warning-soft:hover { background: var(--color-warning); color: #fff; }
+.btn-success-soft { background: var(--color-success-bg); color: #166534; border: none; }
+.btn-success-soft:hover { background: var(--color-success); color: #fff; }
 
 .btn-sm { height: 38px; padding: 0 14px; font-size: 14px; border-radius: var(--radius-sm); }
 

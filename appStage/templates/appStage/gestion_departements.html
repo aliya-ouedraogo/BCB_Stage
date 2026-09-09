@@ -1,0 +1,118 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Services - BCBStageFlow{% endblock %}
+{% block page_title %}Services{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Les services/départements de l'organisation, utilisés pour l'affectation des stagiaires.</span>{% endblock %}
+
+{% block page_css %}
+<style>
+  .form-creer-departement { display: none; }
+  .form-creer-departement.open { display: block; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-title-row" style="cursor:pointer;" onclick="document.getElementById('form-creer-departement').classList.toggle('open'); document.getElementById('fleche-creer-departement').classList.toggle('is-open');">
+      <span class="panel-title" style="display:flex; align-items:center; gap:8px;">
+        <i data-lucide="plus"></i> Créer un service
+      </span>
+      <i data-lucide="chevron-down" id="fleche-creer-departement" style="transition:transform 0.15s ease;{% if form.errors %} transform:rotate(180deg);{% endif %}"></i>
+    </div>
+
+    <div class="form-creer-departement{% if form.errors %} open{% endif %}" id="form-creer-departement">
+      <form method="post" style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="app-message app-message--error">
+            <i data-lucide="alert-triangle" style="width:15px;height:15px; vertical-align:-2px;"></i>
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+            {{ form.nom }}
+            {% for error in form.nom.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.agence.id_for_label }}">{{ form.agence.label }}</label>
+            {{ form.agence }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="align-self:flex-start;">
+          <i data-lucide="plus"></i> Créer le service
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
+    <i data-lucide="search"></i>
+    <input type="search" id="champ-recherche-departements" placeholder="Rechercher un service..." autocomplete="off">
+  </div>
+
+  <div class="panel" id="liste-departements">
+    {% for departement in departements %}
+      <div class="person-row" data-recherche="{{ departement.nom|lower }} {{ departement.agence|default:''|lower }}">
+        <span class="avatar"><i data-lucide="building"></i></span>
+        <div class="person-info">
+          <span class="person-name">{{ departement.nom }}</span>
+          <span class="person-role">
+            {% if departement.agence %}{{ departement.agence }} &bull; {% endif %}
+            {% if departement.directeur %}Dirigé par {{ departement.directeur.user.get_full_name }}{% else %}Aucun directeur assigné{% endif %}
+          </span>
+        </div>
+        <span class="chip" style="min-width:150px; text-align:center;">
+          {{ departement.nb_stagiaires }} stagiaire{{ departement.nb_stagiaires|pluralize }} en cours
+        </span>
+        <form method="post" action="{% url 'appStage:supprimer_departement' departement.id %}"
+          onsubmit="return confirm('Supprimer le service {{ departement.nom }} ? Cette action est impossible s\'il a des stagiaires (passés ou présents).');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce service">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+          </button>
+        </form>
+      </div>
+    {% empty %}
+      <div class="empty-state">
+        <i data-lucide="building"></i>
+        <h2>Aucun service enregistré</h2>
+        <p>Créez le premier service ci-dessus.</p>
+      </div>
+    {% endfor %}
+    <p id="aucun-resultat-departements" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun service ne correspond à cette recherche.</p>
+  </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('champ-recherche-departements');
+      var lignes = document.querySelectorAll('#liste-departements .person-row');
+      var aucunResultat = document.getElementById('aucun-resultat-departements');
+      if (!champ || !lignes.length) return;
+
+      champ.addEventListener('input', function () {
+        var terme = champ.value.trim().toLowerCase();
+        var nbVisibles = 0;
+        lignes.forEach(function (ligne) {
+          var correspond = !terme || (ligne.dataset.recherche || '').indexOf(terme) !== -1;
+          ligne.style.display = correspond ? '' : 'none';
+          if (correspond) nbVisibles += 1;
+        });
+        if (aucunResultat) aucunResultat.style.display = nbVisibles ? 'none' : '';
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var fleche = document.getElementById('fleche-creer-departement');
+      var conteneur = document.getElementById('form-creer-departement');
+      var observateur = new MutationObserver(function () {
+        fleche.style.transform = conteneur.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+      });
+      observateur.observe(conteneur, { attributes: true, attributeFilter: ['class'] });
+    })();
+  </script>
+{% endblock %}

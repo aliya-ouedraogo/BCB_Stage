@@ -1,0 +1,147 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Directeurs - BCBStageFlow{% endblock %}
+{% block page_title %}Directeurs{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Tous les directeurs de service de l'organisation.</span>{% endblock %}
+
+{% block page_css %}
+<style>
+  .form-creer-directeur { display: none; }
+  .form-creer-directeur.open { display: block; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-title-row" style="cursor:pointer;" onclick="document.getElementById('form-creer-directeur').classList.toggle('open'); document.getElementById('fleche-creer-directeur').classList.toggle('is-open');">
+      <span class="panel-title" style="display:flex; align-items:center; gap:8px;">
+        <i data-lucide="user-plus"></i> Créer un compte directeur
+      </span>
+      <i data-lucide="chevron-down" id="fleche-creer-directeur" style="transition:transform 0.15s ease;{% if form.errors %} transform:rotate(180deg);{% endif %}"></i>
+    </div>
+
+    <div class="form-creer-directeur{% if form.errors %} open{% endif %}" id="form-creer-directeur">
+      <form method="post" id="form-creer-directeur-envoi" style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="app-message app-message--error">
+            <i data-lucide="alert-triangle" style="width:15px;height:15px; vertical-align:-2px;"></i>
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.nom_complet.id_for_label }}">{{ form.nom_complet.label }}</label>
+            {{ form.nom_complet }}
+            {% for error in form.nom_complet.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.poste.id_for_label }}">{{ form.poste.label }}</label>
+            {{ form.poste }}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.departement.id_for_label }}">{{ form.departement.label }}</label>
+            {{ form.departement }}
+            {% for error in form.departement.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+        <span class="form-hint">Un e-mail lui sera envoyé pour qu'il définisse lui-même son mot de passe. Seuls les départements sans directeur apparaissent dans la liste.</span>
+        <button type="submit" class="btn btn-primary" id="btn-creer-directeur" style="align-self:flex-start;">
+          <i data-lucide="send"></i> Créer et inviter
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById('form-creer-directeur-envoi');
+      var bouton = document.getElementById('btn-creer-directeur');
+      if (!form || !bouton) return;
+      form.addEventListener('submit', function () {
+        bouton.disabled = true;
+        bouton.innerHTML = '<i data-lucide="loader-2"></i> Création…';
+      });
+    })();
+  </script>
+
+  <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
+    <i data-lucide="search"></i>
+    <input type="search" id="champ-recherche-directeurs" placeholder="Rechercher un directeur..." autocomplete="off">
+  </div>
+
+  <div class="panel" id="liste-directeurs">
+    {% for directeur in directeurs %}
+      <div class="person-row" data-recherche="{{ directeur.user.get_full_name|lower }} {{ directeur.poste|default:''|lower }} {{ directeur.departement.nom|default:''|lower }} {{ directeur.user.email|lower }}">
+        {% if directeur.user.photo %}
+          <img class="avatar" src="{{ directeur.user.photo.url }}" alt="">
+        {% else %}
+          <span class="avatar">{{ directeur.user.first_name|first }}{{ directeur.user.last_name|first }}</span>
+        {% endif %}
+        <div class="person-info">
+          <span class="person-name">{{ directeur.user.get_full_name }}</span>
+          <span class="person-role">
+            {{ directeur.poste|default:"Poste non renseigné" }}
+            &bull; {{ directeur.user.email }}
+          </span>
+        </div>
+        <span class="chip" style="min-width:150px; text-align:center;">
+          {% if directeur.departement %}{{ directeur.departement.nom }}{% else %}Aucun département{% endif %}
+        </span>
+        <form method="post" action="{% url 'appStage:supprimer_directeur' directeur.id %}"
+          onsubmit="return confirm('Supprimer le compte de {{ directeur.user.get_full_name }} ?{% if directeur.departement %} Le service {{ directeur.departement.nom }} se retrouvera sans directeur.{% endif %}');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce compte directeur">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+          </button>
+        </form>
+      </div>
+    {% empty %}
+      <div class="empty-state">
+        <i data-lucide="user-x"></i>
+        <h2>Aucun directeur enregistré</h2>
+        <p>Créez le premier compte directeur ci-dessus.</p>
+      </div>
+    {% endfor %}
+    <p id="aucun-resultat-directeurs" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun directeur ne correspond à cette recherche.</p>
+  </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('champ-recherche-directeurs');
+      var lignes = document.querySelectorAll('#liste-directeurs .person-row');
+      var aucunResultat = document.getElementById('aucun-resultat-directeurs');
+      if (!champ || !lignes.length) return;
+
+      champ.addEventListener('input', function () {
+        var terme = champ.value.trim().toLowerCase();
+        var nbVisibles = 0;
+        lignes.forEach(function (ligne) {
+          var correspond = !terme || (ligne.dataset.recherche || '').indexOf(terme) !== -1;
+          ligne.style.display = correspond ? '' : 'none';
+          if (correspond) nbVisibles += 1;
+        });
+        if (aucunResultat) aucunResultat.style.display = nbVisibles ? 'none' : '';
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var fleche = document.getElementById('fleche-creer-directeur');
+      var conteneur = document.getElementById('form-creer-directeur');
+      var observateur = new MutationObserver(function () {
+        fleche.style.transform = conteneur.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+      });
+      observateur.observe(conteneur, { attributes: true, attributeFilter: ['class'] });
+    })();
+  </script>
+{% endblock %}

@@ -13,6 +13,7 @@ from appStage.models import (
     Evaluation,
     Mission,
     Presence,
+    ProfilDirecteur,
     ProfilMaitreStage,
     ProfilRH,
     ProfilStagiaire,
@@ -23,7 +24,7 @@ from appStage.models import (
 
 
 class Command(BaseCommand):
-    help = "Génère un jeu de données de démonstration pour tester les 3 tableaux de bord."
+    help = "Génère un jeu de données de démonstration pour tester les 4 tableaux de bord (RH, Directeur, Maître de stage, Stagiaire)."
 
     def handle(self, *args, **options):
         if not settings.DEBUG:
@@ -36,7 +37,7 @@ class Command(BaseCommand):
         self.stdout.write("Nettoyage des données existantes...")
         for model in [Presence, RapportHebdomadaire, Mission, Evaluation, Entretien,
                       DemandeEncadrement, DocumentStage, Stage, Candidature,
-                      ProfilStagiaire, ProfilRH, ProfilMaitreStage, Departement]:
+                      ProfilStagiaire, ProfilRH, ProfilMaitreStage, ProfilDirecteur, Departement]:
             model.objects.all().delete()
         User.objects.filter(is_superuser=False).delete()
 
@@ -55,26 +56,50 @@ class Command(BaseCommand):
         profil_rh.service = "Recrutement"
         profil_rh.save()
 
+        # --- Directeurs de service ---
+        # (2 directeurs : un avec un service actif à gérer — propositions en
+        # attente, stagiaires sans maître de stage — l'autre juste pour montrer
+        # un service "calme", tout est déjà assigné.)
+        def creer_directeur(username, prenom, nom, poste, departement):
+            u = User.objects.create_user(
+                username=username, email=f"{username}@bcbstageflow.test", password='DemoPass123',
+                first_name=prenom, last_name=nom, role=User.Role.DIRECTEUR,
+            )
+            profil = u.profil_directeur  # créé automatiquement par le signal post_save
+            profil.poste = poste
+            profil.save()
+            departement.directeur = profil
+            departement.save(update_fields=['directeur'])
+            return profil
+
+        directeur_dev = creer_directeur('b.compaore', 'Boukari', 'Compaoré', "Directeur Technique", dep_dev)
+        directeur_marketing = creer_directeur('r.sana', 'Rasmata', 'Sana', "Directrice Marketing", dep_marketing)
+        # dep_rh et dep_reseau restent volontairement SANS directeur, pour
+        # tester le cas "service sans directeur" (le RH peut quand même y
+        # affecter un stagiaire, mais personne ne recevra la notification
+        # d'affectation tant qu'un directeur n'y est pas assigné).
+
         # --- Maîtres de stage ---
-        # (2 tuteurs pour pouvoir tester le choix du tuteur côté stagiaire et
-        # l'assignation de missions à plusieurs stagiaires différents côté tuteur.)
-        tuteur_user = User.objects.create_user(
+        # (2 maîtres de stage pour pouvoir tester l'acceptation/le refus
+        # d'une proposition d'encadrement, et l'assignation de missions à
+        # plusieurs stagiaires différents.)
+        maitre_kader_user = User.objects.create_user(
             username='M.Kader', email='kader@bcbstageflow.test', password='DemoPass123',
             first_name='', last_name='M. Kader', role=User.Role.MAITRE_STAGE,
         )
-        profil_tuteur = tuteur_user.profil_maitre_stage  # créé automatiquement par le signal post_save
-        profil_tuteur.poste = "Lead Developer"
-        profil_tuteur.departement_affiliation = "Développement Web"
-        profil_tuteur.save()
+        profil_kader = maitre_kader_user.profil_maitre_stage  # créé automatiquement par le signal post_save
+        profil_kader.poste = "Lead Developer"
+        profil_kader.departement_affiliation = "Développement Web"
+        profil_kader.save()
 
-        tuteur2_user = User.objects.create_user(
+        maitre_konate_user = User.objects.create_user(
             username='F.Konate', email='konate@bcbstageflow.test', password='DemoPass123',
             first_name='', last_name='F. Konaté', role=User.Role.MAITRE_STAGE,
         )
-        profil_tuteur2 = tuteur2_user.profil_maitre_stage
-        profil_tuteur2.poste = "Cheffe de Projet Marketing"
-        profil_tuteur2.departement_affiliation = "Marketing Digital"
-        profil_tuteur2.save()
+        profil_konate = maitre_konate_user.profil_maitre_stage
+        profil_konate.poste = "Cheffe de Projet Marketing"
+        profil_konate.departement_affiliation = "Marketing Digital"
+        profil_konate.save()
 
         # --- Stagiaires ---
         def creer_stagiaire(username, prenom, nom, filiere, annee):
@@ -84,16 +109,17 @@ class Command(BaseCommand):
             )
             return ProfilStagiaire.objects.create(user=u, filiere=filiere, annee_etude=annee)
 
-        profil_mariam = creer_stagiaire('mariam', 'Mariam', 'Oued', 'Développement Web', '1ère Année')
-        profil_succes = creer_stagiaire('succes', 'Succes', 'Da', 'Reseau et Telecom', '3ème Année')
-        profil_aliya = creer_stagiaire('aliya', 'Aliya', 'Oued', 'Développement Web', '2ème Année')
-        profil_geoffroy = creer_stagiaire('geoffroy', 'Geoffroy', 'Yam', 'Reseau et Telecom', 'Terminée')
+        profil_mariam = creer_stagiaire('mariam', 'Mariam', 'Oued', 'Développement Web', 'LICENCE_3')
+        profil_succes = creer_stagiaire('succes', 'Succes', 'Da', 'Marketing Digital', 'MASTER_1')
+        profil_aliya = creer_stagiaire('aliya', 'Aliya', 'Oued', 'Ressources Humaines', 'LICENCE_2')
+        profil_geoffroy = creer_stagiaire('geoffroy', 'Geoffroy', 'Yam', 'Marketing Digital', 'MASTER_2')
+        profil_awa = creer_stagiaire('awa', 'Awa', 'Zongo', 'Réseaux et Télécoms', 'LICENCE_3')
 
         aujourdhui = timezone.now().date()
 
-        # --- Stage principal (Mariam) : en cours, avec tuteur, semaine 4/12 ---
+        # --- Stage Mariam : en cours, maître de stage déjà assigné et actif ---
         stage_mariam = Stage.objects.create(
-            stagiaire=profil_mariam, departement=dep_dev, maitre_de_stage=profil_tuteur,
+            stagiaire=profil_mariam, departement=dep_dev, maitre_de_stage=profil_kader,
             intitule_poste="Stagiaire Ingénieur Logiciel",
             date_debut=aujourdhui - datetime.timedelta(weeks=4),
             date_fin=aujourdhui + datetime.timedelta(weeks=8),
@@ -123,15 +149,12 @@ class Command(BaseCommand):
             destinataire=DocumentStage.Destinataire.STAGIAIRE, ajoute_par=rh_user,
             statut_signature=DocumentStage.StatutSignature.SIGNE, date_signature=aujourdhui - datetime.timedelta(weeks=4),
         )
-        # Rapport envoyé par la stagiaire à son tuteur.
+        # Rapport déposé par la stagiaire — notifie automatiquement son
+        # maître de stage ET le directeur du service (nouveau comportement :
+        # la stagiaire ne choisit plus de destinataire, elle dépose simplement).
         DocumentStage.objects.create(
             stage=stage_mariam, nom="Rapport_Hebdo_S3.docx", type_document=DocumentStage.TypeDocument.RAPPORT,
             destinataire=DocumentStage.Destinataire.TUTEUR, ajoute_par=profil_mariam.user,
-        )
-        # Pièce administrative envoyée directement au RH (pas au tuteur).
-        DocumentStage.objects.create(
-            stage=stage_mariam, nom="Piece_Identite_Mariam.pdf", type_document=DocumentStage.TypeDocument.AUTRE,
-            destinataire=DocumentStage.Destinataire.RH, ajoute_par=profil_mariam.user,
         )
         Evaluation.objects.create(
             stage=stage_mariam, type_evaluation=Evaluation.TypeEvaluation.MI_PARCOURS,
@@ -146,9 +169,9 @@ class Command(BaseCommand):
                 present=(i != 5), justifie=(i == 5), valide_par_tuteur=(i > 1),
             )
 
-        # --- Stage Succes : en cours, tuteur assigné, progression avancée ---
+        # --- Stage Succes : en cours, maître de stage assigné, progression avancée ---
         stage_succes = Stage.objects.create(
-            stagiaire=profil_succes, departement=dep_marketing, maitre_de_stage=profil_tuteur,
+            stagiaire=profil_succes, departement=dep_marketing, maitre_de_stage=profil_konate,
             intitule_poste="Stagiaire Marketing Digital",
             date_debut=aujourdhui - datetime.timedelta(weeks=9),
             date_fin=aujourdhui + datetime.timedelta(weeks=3),
@@ -176,7 +199,13 @@ class Command(BaseCommand):
                 stage=stage_succes, date=jour, present=True, valide_par_tuteur=(i > 0),
             )
 
-        # --- Stage Aliya : en cours, PAS de tuteur assigné (demande en attente) ---
+        # --- Stage Aliya : en cours, PAS de maître de stage — proposition du
+        # directeur en attente de réponse (teste dashboard_tuteur ET
+        # affecter_maitre_stage/dashboard_directeur en même temps). Le
+        # service RH n'a pas de directeur : cette proposition est donc créée
+        # ici directement (par le RH lui-même en amont dans la vraie vie,
+        # via /admin/, faute de directeur pour le faire) plutôt que déposée
+        # par un compte directeur inexistant.
         stage_aliya = Stage.objects.create(
             stagiaire=profil_aliya, departement=dep_rh,
             intitule_poste="Stagiaire Ressources Humaines",
@@ -196,10 +225,24 @@ class Command(BaseCommand):
             destinataire=DocumentStage.Destinataire.STAGIAIRE, ajoute_par=rh_user,
             statut_signature=DocumentStage.StatutSignature.EN_ATTENTE,
         )
+        demande_aliya = DemandeEncadrement.objects.create(
+            stage=stage_aliya, maitre_de_stage_demande=profil_kader,
+        )
+
+        # --- Stage Awa : en cours, service SANS directeur et SANS maître de
+        # stage — pour tester l'affichage "service sans directeur" côté RH
+        # (personne à notifier automatiquement) et le cas non bloquant.
+        stage_awa = Stage.objects.create(
+            stagiaire=profil_awa, departement=dep_reseau,
+            intitule_poste="Stagiaire Réseaux",
+            date_debut=aujourdhui - datetime.timedelta(weeks=1),
+            date_fin=aujourdhui + datetime.timedelta(weeks=11),
+            statut=Stage.Statut.EN_COURS, avec_soutenance=False,
+        )
 
         # --- Stage Geoffroy : terminé, avec historique complet (évaluation finale incluse) ---
         stage_geoffroy = Stage.objects.create(
-            stagiaire=profil_geoffroy, departement=dep_marketing, maitre_de_stage=profil_tuteur2,
+            stagiaire=profil_geoffroy, departement=dep_marketing, maitre_de_stage=profil_konate,
             intitule_poste="Stagiaire Design Graphique",
             date_debut=aujourdhui - datetime.timedelta(weeks=26),
             date_fin=aujourdhui - datetime.timedelta(weeks=2),
@@ -221,9 +264,6 @@ class Command(BaseCommand):
                         "été tenues sur la fin du stage. À accompagner davantage sur la gestion du temps.",
         )
 
-        # --- Demande d'encadrement en attente (Aliya vers M. Kader) ---
-        DemandeEncadrement.objects.create(stage=stage_aliya, maitre_de_stage_demande=profil_tuteur)
-
         # --- Entretiens RH consignés ---
         Entretien.objects.create(
             stage=stage_mariam, rh=profil_rh,
@@ -238,30 +278,28 @@ class Command(BaseCommand):
 
         # --- Candidatures en attente / refusée / acceptée (pour le dashboard RH) ---
         Candidature.objects.create(
-            nom_complet="Awa Zongo", email="awa.zongo@example.com", telephone="+226 70 00 00 01",
-            poste_souhaite="Stagiaire Data Analyst",
-            departement_souhaite=dep_reseau, avec_soutenance_souhaite=True,
-        )
-        Candidature.objects.create(
-            nom_complet="Karim Sawadogo", email="karim.sawadogo@example.com", telephone="+226 70 00 00 02",
-            poste_souhaite="Stagiaire Développeur Mobile",
+            nom_complet="Karim Sawadogo", email="karim.sawadogo@example.com", telephone="+22670000002",
+            poste_souhaite="Stagiaire Développeur Mobile", filiere="Développement Web", annee_etude='LICENCE_3',
             departement_souhaite=dep_dev, avec_soutenance_souhaite=False,
         )
-        c_refusee = Candidature.objects.create(
-            nom_complet="Issa Kaboré", email="issa.kabore@example.com", telephone="+226 70 00 00 03",
-            poste_souhaite="Stagiaire Comptabilité",
+        Candidature.objects.create(
+            nom_complet="Issa Kaboré", email="issa.kabore@example.com", telephone="+22670000003",
+            poste_souhaite="Stagiaire Comptabilité", filiere="Finance et Comptabilité", annee_etude='MASTER_1',
         )
+        c_refusee = Candidature.objects.get(nom_complet="Issa Kaboré")
         c_refusee.refuser("Profil ne correspondant pas aux prérequis techniques du poste.", profil_rh)
 
-        # Candidature déjà acceptée — pour tester le badge "Acceptée" et le compte
-        # stagiaire fraîchement créé (mot de passe non défini, en attente d'activation
-        # par e-mail — comportement normal du flux d'acceptation).
+        # Candidature acceptée à l'instant du seed, dans un service AVEC
+        # directeur (dep_rh n'en a pas — on utilise dep_dev ici) — pour
+        # vérifier tout de suite dans la console/boîte mail que la
+        # notification au directeur part bien à l'acceptation.
         c_acceptee = Candidature.objects.create(
-            nom_complet="Fatou Traoré", email="fatou.traore@example.com", telephone="+226 70 00 00 04",
-            poste_souhaite="Stagiaire Assistante RH", departement_souhaite=dep_rh, avec_soutenance_souhaite=True,
+            nom_complet="Fatou Traoré", email="fatou.traore@example.com", telephone="+22670000004",
+            poste_souhaite="Stagiaire Assistante RH", filiere="Ressources Humaines", annee_etude='LICENCE_2',
+            departement_souhaite=dep_dev, avec_soutenance_souhaite=True,
         )
         c_acceptee.accepter(
-            departement=dep_rh, traite_par=profil_rh,
+            departement=dep_dev, traite_par=profil_rh,
             date_debut=aujourdhui + datetime.timedelta(weeks=1),
             date_fin=aujourdhui + datetime.timedelta(weeks=13),
             avec_soutenance=True,
@@ -269,13 +307,21 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             "\nDonnées de démo créées. Comptes de connexion (mot de passe : DemoPass123) :\n"
-            "  - RH          : adminhr\n"
-            "  - Tuteur      : M.Kader (Dév Web / Marketing) — encadre Mariam et Succes\n"
-            "  - Tuteur      : F.Konate (Marketing) — encadre Geoffroy (stage terminé)\n"
-            "  - Stagiaire   : mariam (dashboard complet, en cours, tuteur assigné)\n"
-            "  - Stagiaire   : succes (en cours, avancé, tuteur assigné)\n"
-            "  - Stagiaire   : aliya (en cours, SANS tuteur — demande en attente à tester)\n"
-            "  - Stagiaire   : geoffroy (stage terminé, évaluation finale, entretien de sortie)\n"
-            "  - Fatou Traoré : candidature acceptée à l'instant — pas de compte utilisable "
-            "avant activation par e-mail (lien affiché dans la console du serveur).\n"
+            "  - RH               : adminhr\n"
+            "  - Directeur        : b.compaore (Développement Web) — service actif, tout assigné\n"
+            "  - Directeur        : r.sana (Marketing Digital) — service actif, tout assigné\n"
+            "  - Maître de stage  : M.Kader (Développement Web) — encadre Mariam, proposition en\n"
+            "                       attente de sa réponse pour Aliya (dashboard_tuteur)\n"
+            "  - Maître de stage  : F.Konate (Marketing Digital) — encadre Succes et Geoffroy (terminé)\n"
+            "  - Stagiaire        : mariam (dashboard complet, en cours, maître de stage assigné)\n"
+            "  - Stagiaire        : succes (en cours, avancé, maître de stage assigné)\n"
+            "  - Stagiaire        : aliya (en cours, SANS maître de stage — proposition en attente\n"
+            "                       de réponse de M.Kader ; le service RH n'a pas de directeur)\n"
+            "  - Stagiaire        : awa (en cours, service Réseaux SANS directeur ni maître de stage —\n"
+            "                       cas 'personne à notifier automatiquement')\n"
+            "  - Stagiaire        : geoffroy (stage terminé, évaluation finale, entretien de sortie)\n"
+            "  - Fatou Traoré     : candidature acceptée à l'instant dans le service Développement Web\n"
+            "                       (avec directeur) — vérifiez la notification envoyée à b.compaore\n"
+            "                       (console e-mail si aucun serveur SMTP configuré) ; pas de compte\n"
+            "                       utilisable avant activation par e-mail.\n"
         ))

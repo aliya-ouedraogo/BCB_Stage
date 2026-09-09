@@ -1,0 +1,73 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Affecter un Service - BCBStageFlow{% endblock %}
+{% block page_title %}Affecter un Service{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Affectez ou réaffectez un stagiaire à un service. Le directeur du service choisira ensuite son maître de stage.</span>{% endblock %}
+
+{% block dashboard_content %}
+  <form method="get" id="form-recherche-affectation" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px; margin-bottom:16px;">
+    <input type="hidden" name="limite" id="champ-limite-affectation" value="{{ limite }}">
+    <div class="input-icon-wrap" style="max-width:560px; width:100%; position:relative;">
+      <i data-lucide="search"></i>
+      <input type="search" name="q" id="champ-recherche-affectation" value="{{ recherche }}" placeholder="Rechercher un stagiaire ou un service..." autocomplete="off">
+      <span id="indicateur-recherche-affectation" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11.5px; color:var(--color-text-muted); opacity:0; transition:opacity 0.15s ease; pointer-events:none;">recherche…</span>
+    </div>
+  </form>
+
+  <div class="panel">
+    <div id="resultats-affectation">
+      {% include "appStage/_resultats_affecter_service.html" %}
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('champ-recherche-affectation');
+      var form = document.getElementById('form-recherche-affectation');
+      var resultats = document.getElementById('resultats-affectation');
+      var indicateur = document.getElementById('indicateur-recherche-affectation');
+      var champLimite = document.getElementById('champ-limite-affectation');
+      if (!champ || !form || !resultats) return;
+
+      if (champ.value) {
+        champ.focus();
+        var val = champ.value;
+        champ.value = '';
+        champ.value = val;
+      }
+
+      function rafraichirResultats() {
+        var params = new URLSearchParams(new FormData(form));
+        var url = window.location.pathname + '?' + params.toString();
+        if (indicateur) indicateur.style.opacity = '1';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(function (reponse) { return reponse.text(); })
+          .then(function (html) {
+            resultats.innerHTML = html;
+            if (window.lucide) window.lucide.createIcons();
+            window.history.replaceState(null, '', url);
+          })
+          .catch(function () {})
+          .finally(function () { if (indicateur) indicateur.style.opacity = '0'; });
+      }
+
+      var minuteur = null;
+      champ.addEventListener('input', function () {
+        if (champLimite) champLimite.value = 10;
+        clearTimeout(minuteur);
+        minuteur = setTimeout(rafraichirResultats, 300);
+      });
+
+      resultats.addEventListener('click', function (evenement) {
+        var bouton = evenement.target.closest('.btn-voir-plus');
+        if (!bouton) return;
+        if (champLimite) champLimite.value = parseInt(bouton.dataset.limiteActuelle || '10', 10) + 10;
+        rafraichirResultats();
+      });
+
+      // Après un changement de service (POST classique), on revient sur
+      // cette page ; on réaffiche les icônes lucide pour les lignes rendues côté serveur.
+      if (window.lucide) window.lucide.createIcons();
+    })();
+  </script>
+{% endblock %}

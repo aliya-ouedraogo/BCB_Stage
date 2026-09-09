@@ -7,6 +7,7 @@
 :root {
   /* --- Couleurs de marque --- */
   --color-ink: #0b0b12;              /* sidebar / panneaux sombres */
+  --color-ink-hover: #050508;        /* survol des boutons noirs — plus foncé, jamais #000 pur */
   --color-ink-elevated: #16161f;     /* cartes sur fond sombre */
   --color-ink-border: #2a2a35;
 

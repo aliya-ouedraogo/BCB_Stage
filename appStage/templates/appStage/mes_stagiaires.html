@@ -5,14 +5,19 @@
 {% block page_subtitle %}<span class="subtitle">Tous les stagiaires que vous encadrez, passés et présents.</span>{% endblock %}
 
 {% block dashboard_content %}
-  <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+    <div class="tab-group" id="onglets-mes-stagiaires">
+      <button type="button" class="tab-item active" data-filtre="TOUS">Tous</button>
+      <button type="button" class="tab-item" data-filtre="EN_COURS">En cours</button>
+      <button type="button" class="tab-item" data-filtre="TERMINE">Terminés</button>
+    </div>
     <a href="{% url 'appStage:assigner_mission' %}" class="btn btn-primary">
       <i data-lucide="clipboard-list"></i> Assigner une mission
     </a>
   </div>
-  <div class="panel">
+  <div class="panel" id="liste-mes-stagiaires">
     {% for stage in stages %}
-      <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link">
+      <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="person-row is-link" data-statut="{{ stage.statut }}">
         {% if stage.stagiaire.user.photo %}
           <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
         {% else %}
@@ -35,5 +40,30 @@
     {% empty %}
       <p style="color:var(--color-text-muted); font-size:14px;">Vous n'encadrez aucun stagiaire pour le moment.</p>
     {% endfor %}
+    <p id="aucun-resultat-mes-stagiaires" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun stagiaire dans cette catégorie.</p>
   </div>
+
+  <script>
+    (function () {
+      var onglets = document.querySelectorAll('#onglets-mes-stagiaires .tab-item');
+      var lignes = document.querySelectorAll('#liste-mes-stagiaires .person-row');
+      var aucunResultat = document.getElementById('aucun-resultat-mes-stagiaires');
+      if (!onglets.length || !lignes.length) return;
+
+      onglets.forEach(function (onglet) {
+        onglet.addEventListener('click', function () {
+          onglets.forEach(function (o) { o.classList.remove('active'); });
+          onglet.classList.add('active');
+          var filtre = onglet.dataset.filtre;
+          var nbVisibles = 0;
+          lignes.forEach(function (ligne) {
+            var correspond = filtre === 'TOUS' || ligne.dataset.statut === filtre;
+            ligne.style.display = correspond ? '' : 'none';
+            if (correspond) nbVisibles += 1;
+          });
+          if (aucunResultat) aucunResultat.style.display = nbVisibles ? 'none' : '';
+        });
+      });
+    })();
+  </script>
 {% endblock %}

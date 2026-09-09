@@ -1,7 +1,39 @@
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
+from django.contrib.auth.forms import SetPasswordForm
 
-from .models import Candidature, Departement, DocumentStage, Evaluation, Mission, User
+from .models import Candidature, Departement, DocumentStage, Evaluation, Mission, ProfilMaitreStage, User
+
+
+class ActiverCompteForm(SetPasswordForm):
+    """
+    Étend le SetPasswordForm standard de Django avec un champ nom
+    d'utilisateur choisi par la personne elle-même — sans ça, elle doit
+    deviner le nom auto-généré à partir de son nom complet pour se
+    reconnecter ensuite (ex. « borisouedraogo », pas « Boris » ni « Boris
+    Ouedraogo »), ce qui n'est pas intuitif.
+    """
+    username = forms.CharField(
+        label="Nom d'utilisateur",
+        max_length=150,
+        help_text="C'est ce nom (pas votre nom complet) qui vous servira à vous connecter.",
+    )
+
+    field_order = ['username', 'new_password1', 'new_password2']
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        self.fields['username'].initial = user.username
+
+    def clean_username(self):
+        valeur = self.cleaned_data['username'].strip()
+        if User.objects.filter(username__iexact=valeur).exclude(pk=self.user.pk).exists():
+            raise forms.ValidationError("Ce nom d'utilisateur est déjà pris, choisissez-en un autre.")
+        return valeur
+
+    def save(self, commit=True):
+        self.user.username = self.cleaned_data['username']
+        return super().save(commit=commit)
 
 
 class CandidaturePubliqueForm(forms.ModelForm):
@@ -161,17 +193,18 @@ class SoumettreDocumentForm(forms.ModelForm):
     """
     Le stagiaire ne peut soumettre que des documents de type RAPPORT ou
     AUTRE — CONVENTION/CONTRAT restent des documents administratifs émis
-    par le RH, pas par le stagiaire lui-même. Il choisit qui doit recevoir
-    le document : son maître de stage ou le RH.
+    par le RH, pas par le stagiaire lui-même. Il ne choisit plus de
+    destinataire : il dépose simplement son fichier, qui devient visible
+    par le directeur de son service et son maître de stage (tous deux
+    notifiés par email), sans passer par le RH.
     """
 
     class Meta:
         model = DocumentStage
-        fields = ['nom', 'type_document', 'destinataire', 'mission', 'fichier']
+        fields = ['nom', 'type_document', 'mission', 'fichier']
         labels = {
             'nom': "Nom du document",
             'type_document': "Type",
-            'destinataire': "Destinataire",
             'mission': "Mission concernée",
             'fichier': "Fichier",
         }
@@ -182,12 +215,8 @@ class SoumettreDocumentForm(forms.ModelForm):
             (val, label) for val, label in DocumentStage.TypeDocument.choices
             if val in (DocumentStage.TypeDocument.RAPPORT, DocumentStage.TypeDocument.AUTRE)
         ]
-        self.fields['destinataire'].choices = [
-            (val, label) for val, label in DocumentStage.Destinataire.choices
-            if val in (DocumentStage.Destinataire.TUTEUR, DocumentStage.Destinataire.RH)
-        ]
         self.fields['mission'].required = False
-        self.fields['mission'].empty_label = "Aucune — document indépendant"
+        self.fields['mission'].empty_label = "Aucune (document indépendant)"
         if stage is not None:
             queryset = stage.missions.exclude(statut=Mission.Statut.TERMINEE)
             if self.instance and self.instance.pk and self.instance.mission_id:
@@ -225,3 +254,66 @@ class EnvoyerDocumentRHForm(forms.ModelForm):
             )
         ]
         self.fields['fichier'].required = True
+
+
+class CreerTuteurForm(forms.Form):
+    """Formulaire RH de création d'un compte tuteur (maître de stage)."""
+    nom_complet = forms.CharField(label="Nom complet", max_length=200)
+    email = forms.EmailField(label="Adresse e-mail")
+    poste = forms.CharField(label="Poste", max_length=150, required=False)
+    departement_affiliation = forms.CharField(label="Département d'appartenance", max_length=150, required=False)
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Un compte existe déjà avec cette adresse e-mail.")
+        return email
+
+
+class CreerDirecteurForm(forms.Form):
+    """Formulaire RH de création d'un compte directeur de service, rattaché à un département."""
+    nom_complet = forms.CharField(label="Nom complet", max_length=200)
+    email = forms.EmailField(label="Adresse e-mail")
+    poste = forms.CharField(label="Poste", max_length=150, required=False)
+    departement = forms.ModelChoiceField(
+        queryset=Departement.objects.filter(directeur__isnull=True),
+        label="Département dirigé",
+        empty_label="Choisir un département…",
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Un compte existe déjà avec cette adresse e-mail.")
+        return email
+
+
+class CreerDepartementForm(forms.Form):
+    """Formulaire RH de création d'un service/département."""
+    nom = forms.CharField(label="Nom du service", max_length=150)
+    agence = forms.CharField(label="Ville / agence", max_length=150, required=False)
+
+    def clean_nom(self):
+        nom = self.cleaned_data['nom'].strip()
+        if Departement.objects.filter(nom__iexact=nom).exists():
+            raise forms.ValidationError("Un service porte déjà ce nom.")
+        return nom
+
+
+class AffecterMaitreStageForm(forms.Form):
+    """Le directeur propose un maître de stage pour un stagiaire de son service."""
+    stage_id = forms.IntegerField(widget=forms.HiddenInput)
+    tuteur = forms.ModelChoiceField(
+        queryset=ProfilMaitreStage.objects.select_related('user'),
+        label="Maître de stage proposé", empty_label="Choisir un tuteur…",
+    )
+
+
+class AffecterServiceForm(forms.Form):
+    """Le RH affecte (ou réaffecte) un stagiaire à un département/service."""
+    stage_id = forms.IntegerField(widget=forms.HiddenInput)
+    departement = forms.ModelChoiceField(
+        queryset=Departement.objects.all(),
+        label="Service", empty_label="Choisir un service…",
+    )
+

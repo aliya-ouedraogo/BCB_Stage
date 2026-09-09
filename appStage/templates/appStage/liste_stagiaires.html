@@ -5,9 +5,10 @@
 {% block page_subtitle %}<span class="subtitle">Tous les stagiaires de l'organisation, tous départements confondus.</span>{% endblock %}
 
 {% block dashboard_content %}
-  <form method="get" id="form-recherche-stagiaires" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:4px;">
+  <form method="get" id="form-recherche-stagiaires" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px; margin-bottom:4px;">
     {% if filtre_statut %}<input type="hidden" name="statut" value="{{ filtre_statut }}">{% endif %}
-    <div class="input-icon-wrap" style="max-width:340px; flex:1; position:relative;">
+    <input type="hidden" name="limite" id="champ-limite-stagiaires" value="{{ limite }}">
+    <div class="input-icon-wrap" style="max-width:560px; width:100%; position:relative;">
       <i data-lucide="search"></i>
       <input type="search" name="q" id="champ-recherche-stagiaires" value="{{ recherche }}" placeholder="Rechercher un nom, un poste, un département..." autocomplete="off">
       <span id="indicateur-recherche" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11.5px; color:var(--color-text-muted); opacity:0; transition:opacity 0.15s ease; pointer-events:none;">recherche…</span>
@@ -19,6 +20,7 @@
       <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=TERMINE" class="tab-item {% if filtre_statut == 'TERMINE' %}active{% endif %}">Terminés</a>
     </div>
   </form>
+
 
   <div class="panel">
     <div id="resultats-stagiaires">
@@ -32,6 +34,7 @@
       var form = document.getElementById('form-recherche-stagiaires');
       var resultats = document.getElementById('resultats-stagiaires');
       var indicateur = document.getElementById('indicateur-recherche');
+      var champLimite = document.getElementById('champ-limite-stagiaires');
       if (!champ || !form || !resultats) return;
 
       // Garde le focus + le curseur en fin de champ (utile si la page se recharge,
@@ -66,12 +69,22 @@
 
       // "Debounce" : on ne lance la recherche que ~300ms après la dernière
       // frappe, pour ne pas envoyer une requête à chaque lettre tapée. Si vous
-      // tapez plus vite que ce délai, le chronomètre est juste redémarré — la
+      // tapez plus vite que ce délai, le chronomètre est juste redémarré : la
       // recherche part dès que vous marquez une petite pause.
       var minuteur = null;
       champ.addEventListener('input', function () {
+        if (champLimite) champLimite.value = 10;  // nouvelle recherche : on repart de la première page
         clearTimeout(minuteur);
         minuteur = setTimeout(rafraichirResultats, 300);
+      });
+
+      // "Voir plus" : clic délégué sur le conteneur (le bouton est
+      // recréé à chaque rafraîchissement des résultats).
+      resultats.addEventListener('click', function (evenement) {
+        var bouton = evenement.target.closest('.btn-voir-plus');
+        if (!bouton) return;
+        if (champLimite) champLimite.value = parseInt(bouton.dataset.limiteActuelle || '10', 10) + 10;
+        rafraichirResultats();
       });
     })();
   </script>

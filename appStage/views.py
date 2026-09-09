@@ -2,12 +2,13 @@ import datetime
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.conf import settings
-from django.db.models import Q
+from django.db import IntegrityError
+from django.db.models import Count, ProtectedError, Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -21,9 +22,15 @@ from django.views.decorators.http import require_POST
 from .decorators import role_required
 from .forms import (
     AccepterCandidatureForm,
+    ActiverCompteForm,
+    AffecterMaitreStageForm,
+    AffecterServiceForm,
     AssignerMissionForm,
     CandidaturePubliqueForm,
     ChangerMotDePasseForm,
+    CreerDepartementForm,
+    CreerDirecteurForm,
+    CreerTuteurForm,
     EnvoyerDocumentRHForm,
     EvaluationForm,
     ParametresForm,
@@ -37,7 +44,9 @@ from .models import (
     DocumentStage,
     Evaluation,
     Mission,
+    Notification,
     Presence,
+    ProfilDirecteur,
     ProfilMaitreStage,
     ProfilStagiaire,
     RapportHebdomadaire,
@@ -107,14 +116,14 @@ def activer_compte(request, uidb64, token):
         return render(request, 'appStage/activation_invalide.html', status=400)
 
     if request.method == 'POST':
-        form = SetPasswordForm(user, request.POST)
+        form = ActiverCompteForm(user, request.POST)
         if form.is_valid():
             form.save()
             login(request, user)
-            messages.success(request, "Votre mot de passe est défini. Bienvenue sur BCBStageFlow !")
+            messages.success(request, "Votre compte est activé. Bienvenue sur BCBStageFlow !")
             return redirect(user.get_dashboard_url_name())
     else:
-        form = SetPasswordForm(user)
+        form = ActiverCompteForm(user)
 
     return render(request, 'appStage/activer_compte.html', {'form': form})
 
@@ -241,10 +250,21 @@ def liste_stagiaires(request):
     if filtre_statut in dict(Stage.Statut.choices):
         stages = stages.filter(statut=filtre_statut)
 
+    # Pagination "voir plus" (pas de vraie pagination par pages : on charge
+    # juste davantage de lignes à chaque clic, dans la même liste).
+    total_stagiaires = stages.count()
+    try:
+        limite = max(10, int(request.GET.get('limite', 10)))
+    except (TypeError, ValueError):
+        limite = 10
+
     context = {
-        'stages': stages,
+        'stages': stages[:limite],
         'recherche': recherche,
         'filtre_statut': filtre_statut,
+        'limite': limite,
+        'total_stagiaires': total_stagiaires,
+        'restants': max(0, total_stagiaires - limite),
     }
 
     # Requête de recherche en direct (voir script dans liste_stagiaires.html) :
@@ -253,6 +273,72 @@ def liste_stagiaires(request):
         return render(request, 'appStage/_resultats_stagiaires.html', context)
 
     return render(request, 'appStage/liste_stagiaires.html', context)
+
+
+@role_required(User.Role.RH)
+def affecter_service(request):
+    """
+    Page dédiée à l'affectation (et à la réaffectation) des stagiaires à un
+    service. La première affectation se fait normalement à l'acceptation de
+    la candidature, mais cette page permet de corriger/changer le service
+    d'un stagiaire déjà en poste — ce qui redémarre le processus
+    d'encadrement : le maître de stage éventuel est désassigné et le
+    nouveau directeur de service est notifié pour en choisir un.
+    """
+    Stage.synchroniser_statuts()
+    stages = Stage.objects.select_related('stagiaire__user', 'departement', 'maitre_de_stage__user') \
+        .exclude(statut=Stage.Statut.RESILIE).order_by('-date_debut')
+
+    recherche = request.GET.get('q', '').strip()
+    if recherche:
+        stages = stages.filter(
+            Q(stagiaire__user__first_name__icontains=recherche) |
+            Q(stagiaire__user__last_name__icontains=recherche) |
+            Q(departement__nom__icontains=recherche)
+        )
+
+    if request.method == 'POST':
+        form = AffecterServiceForm(request.POST)
+        if form.is_valid():
+            stage = get_object_or_404(Stage.objects.select_related('departement', 'stagiaire__user'), pk=form.cleaned_data['stage_id'])
+            nouveau_departement = form.cleaned_data['departement']
+            if nouveau_departement.id == stage.departement_id:
+                messages.info(request, f"{stage.stagiaire.user.get_full_name()} est déjà affecté(e) à ce service.")
+            else:
+                ancien_maitre_de_stage = stage.maitre_de_stage
+                stage.departement = nouveau_departement
+                stage.maitre_de_stage = None
+                stage.save(update_fields=['departement', 'maitre_de_stage'])
+                stage.demandes_encadrement.filter(statut=DemandeEncadrement.Statut.EN_ATTENTE).update(
+                    statut=DemandeEncadrement.Statut.REFUSEE, date_reponse=timezone.now(),
+                )
+                stage.notifier_directeur_affectation()
+                message = f"{stage.stagiaire.user.get_full_name()} affecté(e) au service {nouveau_departement.nom}."
+                if ancien_maitre_de_stage:
+                    message += " Son ancien maître de stage a été désassigné : le nouveau directeur doit en choisir un autre."
+                messages.success(request, message)
+            return redirect('appStage:affecter_service')
+        messages.error(request, "Formulaire invalide, réessayez.")
+
+    total_stagiaires = stages.count()
+    try:
+        limite = max(10, int(request.GET.get('limite', 10)))
+    except (TypeError, ValueError):
+        limite = 10
+
+    context = {
+        'stages': stages[:limite],
+        'recherche': recherche,
+        'limite': limite,
+        'total_stagiaires': total_stagiaires,
+        'restants': max(0, total_stagiaires - limite),
+        'departements': Departement.objects.all(),
+    }
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'appStage/_resultats_affecter_service.html', context)
+
+    return render(request, 'appStage/affecter_service.html', context)
 
 
 @role_required(User.Role.RH)
@@ -346,9 +432,10 @@ def dashboard_tuteur(request):
     profil = request.user.profil_maitre_stage
     aujourdhui = timezone.now().date()
 
-    stages_encadres = Stage.objects.filter(
-        maitre_de_stage=profil, statut=Stage.Statut.EN_COURS
-    ).select_related('stagiaire__user')
+    stages_encadres = Stage.objects.filter(maitre_de_stage=profil).filter(
+        Q(statut=Stage.Statut.EN_COURS) |
+        Q(statut=Stage.Statut.TERMINE, date_fin__gte=aujourdhui - datetime.timedelta(days=3))
+    ).select_related('stagiaire__user').order_by('statut', '-date_debut')
 
     rapports_a_valider = RapportHebdomadaire.objects.filter(
         stage__maitre_de_stage=profil, statut=RapportHebdomadaire.Statut.EN_ATTENTE
@@ -362,11 +449,21 @@ def dashboard_tuteur(request):
         date_fin__lte=aujourdhui + datetime.timedelta(days=30), avec_soutenance=True
     ).exclude(evaluations__type_evaluation=Evaluation.TypeEvaluation.FINALE).first()
 
+    # Présences en attente de confirmation, groupées par stagiaire (un seul
+    # geste hebdomadaire plutôt qu'une ligne par jour dans le "À faire").
+    presences_a_confirmer = []
+    for stage in stages_encadres:
+        stage.synchroniser_presences()
+        nb = stage.presences.filter(valide_par_tuteur=False).count()
+        if nb:
+            presences_a_confirmer.append({'stage': stage, 'nb': nb})
+
     context = {
         'stages_encadres': stages_encadres,
         'rapports_a_valider': rapports_a_valider[:4],
         'demandes_en_attente': demandes_en_attente,
-        'nb_a_valider': rapports_a_valider.count() + demandes_en_attente.count(),
+        'presences_a_confirmer': presences_a_confirmer,
+        'nb_a_valider': rapports_a_valider.count() + demandes_en_attente.count() + len(presences_a_confirmer),
         'fin_de_periode': fin_de_periode,
     }
     return render(request, 'appStage/dashboard_tuteur.html', context)
@@ -460,6 +557,154 @@ def envoyer_document_rh(request, stage_id):
     return render(request, 'appStage/envoyer_document_rh.html', {'form': form, 'stage': stage})
 
 
+@role_required(User.Role.RH)
+def gestion_tuteurs(request):
+    """Vue d'ensemble RH de tous les tuteurs (maîtres de stage), avec création directe."""
+    if request.method == 'POST':
+        form = CreerTuteurForm(request.POST)
+        if form.is_valid():
+            try:
+                ProfilMaitreStage.creer_et_inviter(
+                    nom_complet=form.cleaned_data['nom_complet'],
+                    email=form.cleaned_data['email'],
+                    poste=form.cleaned_data['poste'],
+                    departement_affiliation=form.cleaned_data['departement_affiliation'],
+                )
+            except IntegrityError as e:
+                detail = f" Détail technique : {e}" if settings.DEBUG else ""
+                form.add_error(
+                    None,
+                    "Impossible de créer ce compte à cause d'un conflit en base de données. "
+                    "Réessayez ; si le problème persiste, contactez la personne qui gère le serveur."
+                    + detail,
+                )
+            except Exception:
+                form.add_error(
+                    None,
+                    "Le compte n'a pas pu être créé (l'e-mail d'invitation n'a probablement pas pu être envoyé). "
+                    "Vérifiez la configuration d'envoi d'e-mails et réessayez.",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Compte tuteur créé pour {form.cleaned_data['nom_complet']}. "
+                    f"Un e-mail d'activation lui a été envoyé.",
+                )
+                return redirect('appStage:gestion_tuteurs')
+    else:
+        form = CreerTuteurForm()
+
+    tuteurs = ProfilMaitreStage.objects.select_related('user') \
+        .annotate(nb_en_cours=Count('stages_encadres', filter=Q(stages_encadres__statut=Stage.Statut.EN_COURS))) \
+        .order_by('user__first_name', 'user__last_name')
+
+    return render(request, 'appStage/gestion_tuteurs.html', {'form': form, 'tuteurs': tuteurs})
+
+
+@require_POST
+@role_required(User.Role.RH)
+def supprimer_tuteur(request, tuteur_id):
+    """Supprime définitivement un compte tuteur. Ses stages encadrés sont automatiquement désassignés (non supprimés)."""
+    tuteur = get_object_or_404(ProfilMaitreStage.objects.select_related('user'), pk=tuteur_id)
+    nom = tuteur.user.get_full_name()
+    tuteur.user.delete()  # cascade sur ProfilMaitreStage ; Stage.maitre_de_stage passe à NULL (SET_NULL)
+    messages.success(request, f"Compte tuteur de {nom} supprimé.")
+    return redirect('appStage:gestion_tuteurs')
+
+
+@role_required(User.Role.RH)
+def gestion_departements(request):
+    """Vue d'ensemble RH de tous les services/départements, avec création directe."""
+    if request.method == 'POST':
+        form = CreerDepartementForm(request.POST)
+        if form.is_valid():
+            Departement.objects.create(nom=form.cleaned_data['nom'], agence=form.cleaned_data['agence'])
+            messages.success(request, f"Service « {form.cleaned_data['nom']} » créé.")
+            return redirect('appStage:gestion_departements')
+    else:
+        form = CreerDepartementForm()
+
+    departements = Departement.objects.select_related('directeur__user').annotate(
+        nb_stagiaires=Count('stages', filter=Q(stages__statut=Stage.Statut.EN_COURS))
+    ).order_by('nom')
+
+    return render(request, 'appStage/gestion_departements.html', {'form': form, 'departements': departements})
+
+
+@require_POST
+@role_required(User.Role.RH)
+def supprimer_departement(request, departement_id):
+    """Supprime un service, uniquement s'il n'a plus aucun stage rattaché (protection en base)."""
+    departement = get_object_or_404(Departement, pk=departement_id)
+    nom = departement.nom
+    try:
+        departement.delete()
+    except ProtectedError:
+        messages.error(
+            request,
+            f"Impossible de supprimer « {nom} » : des stagiaires y sont (ou y ont été) affectés. "
+            f"Réaffectez-les d'abord à un autre service."
+        )
+    else:
+        messages.success(request, f"Service « {nom} » supprimé.")
+    return redirect('appStage:gestion_departements')
+
+
+@role_required(User.Role.RH)
+def gestion_directeurs(request):
+    """Vue d'ensemble RH de tous les directeurs de service, avec création directe."""
+    if request.method == 'POST':
+        form = CreerDirecteurForm(request.POST)
+        if form.is_valid():
+            try:
+                ProfilDirecteur.creer_et_inviter(
+                    nom_complet=form.cleaned_data['nom_complet'],
+                    email=form.cleaned_data['email'],
+                    departement=form.cleaned_data['departement'],
+                    poste=form.cleaned_data['poste'],
+                )
+            except IntegrityError as e:
+                detail = f" Détail technique : {e}" if settings.DEBUG else ""
+                form.add_error(
+                    None,
+                    "Impossible de créer ce compte à cause d'un conflit en base de données. "
+                    "Réessayez ; si le problème persiste, contactez la personne qui gère le serveur."
+                    + detail,
+                )
+            except Exception:
+                form.add_error(
+                    None,
+                    "Le compte n'a pas pu être créé (l'e-mail d'invitation n'a probablement pas pu être envoyé). "
+                    "Vérifiez la configuration d'envoi d'e-mails et réessayez.",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Compte directeur créé pour {form.cleaned_data['nom_complet']}. "
+                    f"Un e-mail d'activation lui a été envoyé.",
+                )
+                return redirect('appStage:gestion_directeurs')
+    else:
+        form = CreerDirecteurForm()
+
+    directeurs = ProfilDirecteur.objects.select_related('user', 'departement').order_by(
+        'user__first_name', 'user__last_name'
+    )
+
+    return render(request, 'appStage/gestion_directeurs.html', {'form': form, 'directeurs': directeurs})
+
+
+@require_POST
+@role_required(User.Role.RH)
+def supprimer_directeur(request, directeur_id):
+    """Supprime définitivement un compte directeur. Le département concerné se retrouve sans directeur (SET_NULL)."""
+    directeur = get_object_or_404(ProfilDirecteur.objects.select_related('user'), pk=directeur_id)
+    nom = directeur.user.get_full_name()
+    directeur.user.delete()  # cascade sur ProfilDirecteur ; Departement.directeur passe à NULL (SET_NULL)
+    messages.success(request, f"Compte directeur de {nom} supprimé.")
+    return redirect('appStage:gestion_directeurs')
+
+
 @role_required(User.Role.MAITRE_STAGE)
 def mes_stagiaires(request):
     profil = request.user.profil_maitre_stage
@@ -479,6 +724,7 @@ def assigner_mission(request):
         form.fields['stage'].queryset = stages_encadres
         if form.is_valid():
             mission = form.save()
+            mission.notifier_stagiaire()
             messages.success(request, f"Mission « {mission.titre} » assignée à {mission.stage.stagiaire.user.get_full_name()}.")
             return redirect('appStage:assigner_mission')
     else:
@@ -505,14 +751,20 @@ def _get_stage_ou_403(request, stage_id):
 def fiche_stagiaire(request, stage_id):
     Stage.synchroniser_statuts()
     stage = _get_stage_ou_403(request, stage_id)
+    stage.synchroniser_presences()
     context = {
         'stage': stage,
         'missions': stage.missions.all(),
         'documents': stage.documents.all(),
         'presences': stage.presences.all()[:14],
+        'presences_a_confirmer': stage.presences.filter(valide_par_tuteur=False).count(),
         'evaluations': stage.evaluations.all(),
         'peut_evaluer': request.user.role == User.Role.MAITRE_STAGE,
         'peut_envoyer_document': request.user.role == User.Role.RH,
+        'peut_gerer_presence': (
+            request.user.role == User.Role.MAITRE_STAGE
+            and stage.maitre_de_stage_id and stage.maitre_de_stage.user_id == request.user.id
+        ),
     }
     return render(request, 'appStage/fiche_stagiaire.html', context)
 
@@ -597,6 +849,7 @@ def dashboard_stagiaire(request):
     context = {'stage': stage}
 
     if stage:
+        stage.synchroniser_presences()
         aujourdhui = timezone.now().date()
         presences = stage.presences.all()
 
@@ -677,19 +930,20 @@ def soumettre_document(request):
         if form.is_valid():
             doc = form.save(commit=False)
             doc.stage = stage
+            doc.destinataire = DocumentStage.Destinataire.TUTEUR
             doc.ajoute_par = request.user
             doc.save()
+            doc.notifier_depot_stagiaire()
 
             if doc.mission and doc.mission.statut != Mission.Statut.TERMINEE:
                 doc.mission.statut = Mission.Statut.TERMINEE
                 doc.mission.save(update_fields=['statut'])
                 messages.success(
                     request,
-                    f"Document « {doc.nom} » envoyé, la mission « {doc.mission.titre} » a été marquée terminée.",
+                    f"Document « {doc.nom} » déposé, la mission « {doc.mission.titre} » a été marquée terminée.",
                 )
             else:
-                destinataire_label = "au RH" if doc.destinataire == DocumentStage.Destinataire.RH else "à votre maître de stage"
-                messages.success(request, f"Document « {doc.nom} » envoyé {destinataire_label}.")
+                messages.success(request, f"Document « {doc.nom} » déposé avec succès.")
             return redirect('appStage:mes_documents')
     else:
         mission_id_prerempli = request.GET.get('mission')
@@ -719,26 +973,152 @@ def modifier_document(request, document_id):
     })
 
 
-@role_required(User.Role.STAGIAIRE)
-def choisir_tuteur(request):
-    stage = request.user.profil_stagiaire.stage_actif
+# =========================================================
+# Espace Directeur de service
+# =========================================================
+
+@role_required(User.Role.DIRECTEUR)
+def dashboard_directeur(request):
+    Stage.synchroniser_statuts()
+    profil = request.user.profil_directeur
+    departement = getattr(profil, 'departement', None)
+
+    if departement is None:
+        return render(request, 'appStage/dashboard_directeur.html', {'departement': None})
+
+    stages_service = Stage.objects.filter(departement=departement, statut=Stage.Statut.EN_COURS) \
+        .select_related('stagiaire__user', 'maitre_de_stage__user')
+
+    stages_sans_tuteur = stages_service.filter(maitre_de_stage__isnull=True).exclude(
+        demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE
+    )
+    demandes_en_attente = DemandeEncadrement.objects.filter(
+        stage__departement=departement, statut=DemandeEncadrement.Statut.EN_ATTENTE,
+    ).select_related('stage__stagiaire__user', 'maitre_de_stage_demande__user')
+
+    documents_recents = DocumentStage.objects.filter(
+        stage__departement=departement, destinataire=DocumentStage.Destinataire.TUTEUR,
+    ).select_related('stage__stagiaire__user').order_by('-date_ajout')[:5]
+
+    context = {
+        'departement': departement,
+        'stages_service': stages_service,
+        'stages_sans_tuteur': stages_sans_tuteur,
+        'demandes_en_attente': demandes_en_attente,
+        'documents_recents': documents_recents,
+        'nb_a_traiter': stages_sans_tuteur.count(),
+    }
+    return render(request, 'appStage/dashboard_directeur.html', context)
+
+
+@role_required(User.Role.DIRECTEUR)
+def affecter_maitre_stage(request):
+    """
+    Le directeur propose un maître de stage à un stagiaire de son service.
+    L'affectation ne devient effective qu'après acceptation du tuteur
+    (voir DemandeEncadrement.accepter, via repondre_demande_encadrement).
+    """
+    profil = request.user.profil_directeur
+    departement = getattr(profil, 'departement', None)
+    if departement is None:
+        messages.error(request, "Vous n'êtes rattaché(e) à aucun département pour le moment.")
+        return redirect('appStage:dashboard_directeur')
+
+    stages_en_attente = Stage.objects.filter(
+        departement=departement, statut=Stage.Statut.EN_COURS, maitre_de_stage__isnull=True,
+    ).exclude(
+        demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE
+    ).select_related('stagiaire__user')
+
+    if request.method == 'POST':
+        form = AffecterMaitreStageForm(request.POST)
+        if form.is_valid():
+            stage = get_object_or_404(stages_en_attente, pk=form.cleaned_data['stage_id'])
+            tuteur = form.cleaned_data['tuteur']
+            demande = DemandeEncadrement.objects.create(
+                stage=stage, maitre_de_stage_demande=tuteur, proposee_par=profil,
+            )
+            demande.notifier_tuteur()
+            messages.success(
+                request,
+                f"Proposition envoyée à {tuteur.user.get_full_name()} pour encadrer "
+                f"{stage.stagiaire.user.get_full_name()}.",
+            )
+            return redirect('appStage:affecter_maitre_stage')
+        messages.error(request, "Formulaire invalide, réessayez.")
+
+    demandes_en_cours = DemandeEncadrement.objects.filter(
+        stage__departement=departement, statut=DemandeEncadrement.Statut.EN_ATTENTE,
+    ).select_related('stage__stagiaire__user', 'maitre_de_stage_demande__user')
+
     tuteurs = ProfilMaitreStage.objects.select_related('user').all()
-    demande_existante = None
-    if stage:
-        demande_existante = stage.demandes_encadrement.filter(
-            statut=DemandeEncadrement.Statut.EN_ATTENTE
-        ).select_related('maitre_de_stage_demande__user').first()
 
-    if request.method == 'POST' and stage and not stage.maitre_de_stage and not demande_existante:
-        tuteur_id = request.POST.get('tuteur_id')
-        tuteur = get_object_or_404(ProfilMaitreStage, pk=tuteur_id)
-        DemandeEncadrement.objects.create(stage=stage, maitre_de_stage_demande=tuteur)
-        messages.success(request, f"Demande envoyée à {tuteur.user.get_full_name()}.")
-        return redirect('appStage:choisir_tuteur')
-
-    return render(request, 'appStage/choisir_tuteur.html', {
-        'stage': stage, 'tuteurs': tuteurs, 'demande_existante': demande_existante,
+    return render(request, 'appStage/affecter_maitre_stage.html', {
+        'stages_en_attente': stages_en_attente,
+        'demandes_en_cours': demandes_en_cours,
+        'tuteurs': tuteurs,
+        'departement': departement,
     })
+
+
+@role_required(User.Role.DIRECTEUR)
+def documents_recus_directeur(request):
+    """
+    Page "Documents" du directeur : recherche d'un stagiaire de son service,
+    puis accès (par stagiaire) aux documents qu'il a déposés ("Reçus") ou à
+    ceux que le RH lui a envoyés, ex. contrat de travail ("Envoyés").
+    """
+    profil = request.user.profil_directeur
+    departement = getattr(profil, 'departement', None)
+
+    onglet = request.GET.get('onglet', 'recus')
+    if onglet not in ('recus', 'envoyes'):
+        onglet = 'recus'
+    destinataire_cible = (
+        DocumentStage.Destinataire.TUTEUR if onglet == 'recus' else DocumentStage.Destinataire.STAGIAIRE
+    )
+
+    stages = Stage.objects.filter(departement=departement) \
+        .select_related('stagiaire__user') \
+        .prefetch_related('documents') \
+        .order_by('-date_debut') if departement else Stage.objects.none()
+
+    recherche = request.GET.get('q', '').strip()
+    if recherche:
+        stages = stages.filter(
+            Q(stagiaire__user__first_name__icontains=recherche) |
+            Q(stagiaire__user__last_name__icontains=recherche)
+        )
+
+    stages_avec_docs = []
+    for stage in stages:
+        docs = sorted(
+            (d for d in stage.documents.all() if d.destinataire == destinataire_cible),
+            key=lambda d: d.date_ajout, reverse=True,
+        )
+        if docs:
+            stages_avec_docs.append({'stage': stage, 'documents': docs})
+
+    total_stagiaires = len(stages_avec_docs)
+    try:
+        limite = max(10, int(request.GET.get('limite', 10)))
+    except (TypeError, ValueError):
+        limite = 10
+
+    context = {
+        'stages_avec_docs': stages_avec_docs[:limite],
+        'departement': departement,
+        'onglet': onglet,
+        'recherche': recherche,
+        'limite': limite,
+        'total_stagiaires': total_stagiaires,
+        'restants': max(0, total_stagiaires - limite),
+    }
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'appStage/_resultats_documents_directeur.html', context)
+
+    return render(request, 'appStage/documents_recus_directeur.html', context)
 
 
 @require_POST
@@ -747,12 +1127,61 @@ def pointer_presence(request):
     """Auto-déclaration de présence du jour par le stagiaire (à confirmer ensuite par le tuteur)."""
     stage = request.user.profil_stagiaire.stage_actif
     if stage:
+        note = request.POST.get('note_activite', '').strip()[:280]
         Presence.objects.get_or_create(
             stage=stage, date=timezone.now().date(),
-            defaults={'present': True},
+            defaults={'present': True, 'note_activite': note},
         )
         messages.success(request, "Présence enregistrée pour aujourd'hui.")
     return redirect('appStage:dashboard_stagiaire')
+
+
+def _presence_appartient_au_tuteur(request, presence):
+    stage = presence.stage
+    return stage.maitre_de_stage_id and stage.maitre_de_stage.user_id == request.user.id
+
+
+@require_POST
+@role_required(User.Role.MAITRE_STAGE)
+def confirmer_presence(request, presence_id, action):
+    """
+    Le tuteur traite un jour auto-déclaré ou auto-marqué absent :
+    - confirmer  : entérine tel quel (présent reste présent, absent reste absent)
+    - contester  : le stagiaire avait pointé présent, mais ce n'était pas le cas
+    - justifier  : le jour était marqué absent, mais l'absence est justifiée
+    """
+    presence = get_object_or_404(
+        Presence.objects.select_related('stage__maitre_de_stage__user'), pk=presence_id
+    )
+    if not _presence_appartient_au_tuteur(request, presence):
+        raise PermissionDenied("Vous n'encadrez pas ce stagiaire.")
+
+    if action == 'contester':
+        presence.present = False
+        presence.justifie = False
+    elif action == 'justifier':
+        presence.justifie = True
+    elif action != 'confirmer':
+        raise Http404
+
+    presence.valide_par_tuteur = True
+    presence.save()
+    messages.success(request, "Présence mise à jour.")
+    return redirect(reverse('appStage:fiche_stagiaire', kwargs={'stage_id': presence.stage_id}) + '#presence')
+
+
+@require_POST
+@role_required(User.Role.MAITRE_STAGE)
+def confirmer_semaine_presence(request, stage_id):
+    """Confirme en un clic toutes les présences en attente d'un stagiaire, telles quelles."""
+    stage = get_object_or_404(Stage.objects.select_related('maitre_de_stage__user'), pk=stage_id)
+    if not stage.maitre_de_stage_id or stage.maitre_de_stage.user_id != request.user.id:
+        raise PermissionDenied("Vous n'encadrez pas ce stagiaire.")
+
+    nb = stage.presences.filter(valide_par_tuteur=False).update(valide_par_tuteur=True)
+    if nb:
+        messages.success(request, f"{nb} jour{'s' if nb > 1 else ''} de présence confirmé{'s' if nb > 1 else ''}.")
+    return redirect(reverse('appStage:fiche_stagiaire', kwargs={'stage_id': stage.id}) + '#presence')
 
 
 @require_POST
@@ -770,10 +1199,33 @@ def avancer_mission(request, mission_id):
 
 
 # =========================================================
+# Notifications (communes à tous les rôles)
+# =========================================================
+
+@require_POST
+@role_required(User.Role.STAGIAIRE, User.Role.RH, User.Role.MAITRE_STAGE, User.Role.DIRECTEUR)
+def marquer_notification_lue(request, notification_id):
+    """Marque une notification comme lue, puis redirige vers sa cible (ou le dashboard à défaut)."""
+    notification = get_object_or_404(Notification, pk=notification_id, destinataire=request.user)
+    notification.lu = True
+    notification.save(update_fields=['lu'])
+    if notification.lien:
+        return redirect(notification.lien)
+    return redirect(request.user.get_dashboard_url_name())
+
+
+@require_POST
+@role_required(User.Role.STAGIAIRE, User.Role.RH, User.Role.MAITRE_STAGE, User.Role.DIRECTEUR)
+def marquer_toutes_notifications_lues(request):
+    request.user.notifications.filter(lu=False).update(lu=True)
+    return redirect(request.POST.get('next') or request.user.get_dashboard_url_name())
+
+
+# =========================================================
 # Paramètres (commun aux 3 rôles)
 # =========================================================
 
-@role_required(User.Role.STAGIAIRE, User.Role.RH, User.Role.MAITRE_STAGE)
+@role_required(User.Role.STAGIAIRE, User.Role.RH, User.Role.MAITRE_STAGE, User.Role.DIRECTEUR)
 def parametres(request):
     if request.method == 'POST' and request.POST.get('form_type') == 'securite':
         securite_form = ChangerMotDePasseForm(request.user, request.POST)

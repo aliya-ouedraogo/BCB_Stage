@@ -1,0 +1,149 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Maîtres de Stage - BCBStageFlow{% endblock %}
+{% block page_title %}Maîtres de Stage{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Tous les maîtres de stage de l'organisation.</span>{% endblock %}
+
+{% block page_css %}
+<style>
+  .form-creer-tuteur { display: none; }
+  .form-creer-tuteur.open { display: block; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-title-row" style="cursor:pointer;" onclick="document.getElementById('form-creer-tuteur').classList.toggle('open'); document.getElementById('fleche-creer-tuteur').classList.toggle('is-open');">
+      <span class="panel-title" style="display:flex; align-items:center; gap:8px;">
+        <i data-lucide="user-plus"></i> Créer un compte maître de stage
+      </span>
+      <i data-lucide="chevron-down" id="fleche-creer-tuteur" style="transition:transform 0.15s ease;{% if form.errors %} transform:rotate(180deg);{% endif %}"></i>
+    </div>
+
+    <div class="form-creer-tuteur{% if form.errors %} open{% endif %}" id="form-creer-tuteur">
+      <form method="post" id="form-creer-tuteur-envoi" style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="app-message app-message--error">
+            <i data-lucide="alert-triangle" style="width:15px;height:15px; vertical-align:-2px;"></i>
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.nom_complet.id_for_label }}">{{ form.nom_complet.label }}</label>
+            {{ form.nom_complet }}
+            {% for error in form.nom_complet.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.poste.id_for_label }}">{{ form.poste.label }}</label>
+            {{ form.poste }}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.departement_affiliation.id_for_label }}">{{ form.departement_affiliation.label }}</label>
+            {{ form.departement_affiliation }}
+          </div>
+        </div>
+        <span class="form-hint">Un e-mail lui sera envoyé pour qu'il définisse lui-même son mot de passe.</span>
+        <button type="submit" class="btn btn-primary" id="btn-creer-tuteur" style="align-self:flex-start;">
+          <i data-lucide="send"></i> Créer et inviter
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Empêche le double envoi (double-clic, ou second clic pendant le
+    // rechargement) qui peut créer deux comptes en même temps.
+    (function () {
+      var form = document.getElementById('form-creer-tuteur-envoi');
+      var bouton = document.getElementById('btn-creer-tuteur');
+      if (!form || !bouton) return;
+      form.addEventListener('submit', function () {
+        bouton.disabled = true;
+        bouton.innerHTML = '<i data-lucide="loader-2"></i> Création…';
+      });
+    })();
+  </script>
+
+  <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
+    <i data-lucide="search"></i>
+    <input type="search" id="champ-recherche-tuteurs" placeholder="Rechercher un maître de stage..." autocomplete="off">
+  </div>
+
+  <div class="panel" id="liste-tuteurs">
+    {% for tuteur in tuteurs %}
+      <div class="person-row" data-recherche="{{ tuteur.user.get_full_name|lower }} {{ tuteur.poste|lower }} {{ tuteur.departement_affiliation|default:''|lower }} {{ tuteur.user.email|lower }}">
+        {% if tuteur.user.photo %}
+          <img class="avatar" src="{{ tuteur.user.photo.url }}" alt="">
+        {% else %}
+          <span class="avatar">{{ tuteur.user.first_name|first }}{{ tuteur.user.last_name|first }}</span>
+        {% endif %}
+        <div class="person-info">
+          <span class="person-name">{{ tuteur.user.get_full_name }}</span>
+          <span class="person-role">
+            {{ tuteur.poste|default:"Poste non renseigné" }}
+            {% if tuteur.departement_affiliation %} &bull; {{ tuteur.departement_affiliation }}{% endif %}
+            &bull; {{ tuteur.user.email }}
+          </span>
+        </div>
+        <span class="chip" style="min-width:150px; text-align:center;">
+          {{ tuteur.nb_en_cours }} stagiaire{{ tuteur.nb_en_cours|pluralize }} en cours
+        </span>
+        <form method="post" action="{% url 'appStage:supprimer_tuteur' tuteur.id %}"
+          onsubmit="return confirm('Supprimer le compte de {{ tuteur.user.get_full_name }} ?{% if tuteur.nb_en_cours %} Il encadre actuellement {{ tuteur.nb_en_cours }} stagiaire{{ tuteur.nb_en_cours|pluralize }}, qui se retrouveront sans maître de stage assigné.{% endif %}');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce compte maître de stage">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+          </button>
+        </form>
+      </div>
+    {% empty %}
+      <div class="empty-state">
+        <i data-lucide="user-x"></i>
+        <h2>Aucun maître de stage enregistré</h2>
+        <p>Créez le premier compte maître de stage ci-dessus.</p>
+      </div>
+    {% endfor %}
+    <p id="aucun-resultat-tuteurs" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun maître de stage ne correspond à cette recherche.</p>
+  </div>
+
+  <script>
+    (function () {
+      var champ = document.getElementById('champ-recherche-tuteurs');
+      var lignes = document.querySelectorAll('#liste-tuteurs .person-row');
+      var aucunResultat = document.getElementById('aucun-resultat-tuteurs');
+      if (!champ || !lignes.length) return;
+
+      champ.addEventListener('input', function () {
+        var terme = champ.value.trim().toLowerCase();
+        var nbVisibles = 0;
+        lignes.forEach(function (ligne) {
+          var correspond = !terme || (ligne.dataset.recherche || '').indexOf(terme) !== -1;
+          ligne.style.display = correspond ? '' : 'none';
+          if (correspond) nbVisibles += 1;
+        });
+        if (aucunResultat) aucunResultat.style.display = nbVisibles ? 'none' : '';
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var fleche = document.getElementById('fleche-creer-tuteur');
+      var conteneur = document.getElementById('form-creer-tuteur');
+      var observateur = new MutationObserver(function () {
+        fleche.style.transform = conteneur.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+      });
+      observateur.observe(conteneur, { attributes: true, attributeFilter: ['class'] });
+    })();
+  </script>
+{% endblock %}

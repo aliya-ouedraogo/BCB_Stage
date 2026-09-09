@@ -1,0 +1,60 @@
+{% for entry in stages_avec_docs %}
+  <details class="doc-accordion" style="border-bottom:1px solid var(--color-border, #eef0f2); padding:10px 0;">
+    <summary style="display:flex; align-items:center; gap:12px; cursor:pointer; list-style:none;">
+      {% if entry.stage.stagiaire.user.photo %}
+        <img class="avatar" src="{{ entry.stage.stagiaire.user.photo.url }}" alt="">
+      {% else %}
+        <span class="avatar">{{ entry.stage.stagiaire.user.first_name|first }}{{ entry.stage.stagiaire.user.last_name|first }}</span>
+      {% endif %}
+      <div class="person-info" style="flex:1;">
+        <span class="person-name">{{ entry.stage.stagiaire.user.get_full_name }}</span>
+        <span class="person-role">{{ entry.stage.intitule_poste }}</span>
+      </div>
+      <span class="count-badge">{{ entry.documents|length }}</span>
+      <span class="btn btn-outline btn-sm doc-accordion-toggle">
+        <i data-lucide="chevron-down"></i> Voir
+      </span>
+    </summary>
+
+    <div style="margin-top:12px; padding-left:52px;">
+      {% for doc in entry.documents %}
+        <div class="doc-row">
+          {% if doc.type_document == 'RAPPORT' %}
+            <span class="doc-icon doc-icon--doc"><i data-lucide="file"></i></span>
+          {% else %}
+            <span class="doc-icon doc-icon--folder"><i data-lucide="folder"></i></span>
+          {% endif %}
+          <div class="doc-info" style="flex:1;">
+            <div class="doc-name">{{ doc.nom }}</div>
+            <div class="doc-meta">
+              {{ doc.get_type_document_display }} &bull;
+              {% if onglet == 'envoyes' %}Envoyé{% else %}Déposé{% endif %} le {{ doc.date_ajout|date:"d M Y" }} à {{ doc.date_ajout|date:"H:i" }}
+            </div>
+          </div>
+          {% if doc.fichier %}
+            <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i> Télécharger</a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </details>
+{% empty %}
+  <div class="empty-state">
+    <i data-lucide="inbox"></i>
+    <h2>Aucun document à afficher</h2>
+    <p>
+      {% if recherche %}
+        Aucun stagiaire ne correspond à cette recherche.
+      {% elif onglet == 'envoyes' %}
+        Aucun document envoyé à vos stagiaires pour le moment.
+      {% else %}
+        Aucun stagiaire de votre service n'a encore déposé de document.
+      {% endif %}
+    </p>
+  </div>
+{% endfor %}
+{% if total_stagiaires > limite %}
+  <button type="button" class="btn btn-outline btn-sm btn-voir-plus" data-limite-actuelle="{{ limite }}" style="margin-top:14px;">
+    Voir plus ({{ restants }} restant{{ restants|pluralize }})
+  </button>
+{% endif %}

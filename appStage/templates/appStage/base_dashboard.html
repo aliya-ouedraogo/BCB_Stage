@@ -41,6 +41,38 @@
       </div>
 
       <div class="topbar-actions">
+        <div class="notif-bell" style="position:relative;">
+          <button type="button" onclick="document.getElementById('notif-dropdown').classList.toggle('open');"
+                  style="position:relative; background:none; border:none; cursor:pointer; padding:6px;">
+            <i data-lucide="bell"></i>
+            {% if notifications_non_lues %}
+              <span class="badge badge-danger" style="position:absolute; top:0; right:0; min-width:16px; height:16px; padding:0 4px; font-size:10px; line-height:16px; border-radius:8px;">{{ notifications_non_lues }}</span>
+            {% endif %}
+          </button>
+          <div id="notif-dropdown" style="display:none; position:absolute; right:0; top:100%; width:320px; max-height:400px; overflow-y:auto; background:var(--color-surface, #fff); border:1px solid var(--color-border, #e5e7eb); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:50;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--color-border, #e5e7eb);">
+              <strong style="font-size:13px;">Notifications</strong>
+              {% if notifications_non_lues %}
+                <form method="post" action="{% url 'appStage:marquer_toutes_notifications_lues' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button type="submit" style="border:none; background:none; color:var(--color-primary, #2563eb); font-size:12px; cursor:pointer;">Tout marquer lu</button>
+                </form>
+              {% endif %}
+            </div>
+            {% for notif in notifications_recentes %}
+              <form method="post" action="{% url 'appStage:marquer_notification_lue' notif.id %}">
+                {% csrf_token %}
+                <button type="submit" style="width:100%; text-align:left; border:none; background:{% if not notif.lu %}var(--color-info-bg, #eef4ff){% else %}transparent{% endif %}; padding:10px 14px; font-size:12.5px; cursor:pointer; border-bottom:1px solid var(--color-border, #f0f0f0);">
+                  {{ notif.message }}
+                  <div style="color:var(--color-text-muted); font-size:11px; margin-top:2px;">{{ notif.date_creation|timesince }}</div>
+                </button>
+              </form>
+            {% empty %}
+              <p style="padding:16px 14px; color:var(--color-text-muted); font-size:12.5px;">Aucune notification pour le moment.</p>
+            {% endfor %}
+          </div>
+        </div>
         <a href="{% url 'appStage:parametres' %}" class="topbar-user">
           <span class="user-avatar">
             {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">

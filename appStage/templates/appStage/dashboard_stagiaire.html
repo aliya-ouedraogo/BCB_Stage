@@ -35,14 +35,10 @@
   {% endif %}
 
   {% if not stage.maitre_de_stage %}
-    <a href="{% url 'appStage:choisir_tuteur' %}" class="cta-banner" style="margin-bottom:20px;">
-      <span class="cta-banner-icon"><i data-lucide="user-plus"></i></span>
-      <div class="cta-banner-text">
-        <strong>Aucun maître de stage assigné</strong>
-        <span>Choisissez un tuteur pour être accompagné(e) pendant votre stage.</span>
-      </div>
-      <i data-lucide="arrow-right" class="cta-banner-arrow"></i>
-    </a>
+    <div class="app-message app-message--info" style="margin-bottom:20px;">
+      <i data-lucide="user-clock" style="width:15px;height:15px; vertical-align:-2px;"></i>
+      Aucun maître de stage ne vous a encore été assigné. Votre directeur de service en choisira un pour vous prochainement.
+    </div>
   {% endif %}
 
   <!-- Ligne 1 : progression du stage + présence -->
@@ -108,7 +104,9 @@
               <i data-lucide="check"></i> Présence déjà enregistrée
             </button>
           {% else %}
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top:18px;">
+            <textarea name="note_activite" maxlength="280" rows="2" placeholder="Qu'avez-vous fait aujourd'hui ? (facultatif)"
+              style="width:100%; margin-top:14px; padding:10px 12px; border-radius:var(--radius-md); border:1px solid #3a3a4d; background:#22222f; color:#fff; font-family:inherit; font-size:13.5px; resize:vertical;"></textarea>
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top:10px;">
               <i data-lucide="log-in"></i> Pointer aujourd'hui
             </button>
           {% endif %}
@@ -117,7 +115,7 @@
     </div>
   </div>
 
-  <!-- Ligne 2 : mission en cours / documents récents / retour du tuteur -->
+  <!-- Ligne 2 : mission en cours / documents récents / retour du maître de stage -->
   <div class="mini-grid">
 
     <div class="panel">
@@ -190,7 +188,7 @@
 
     <div class="panel">
       <div class="panel-title-row">
-        <h2 class="panel-title" style="margin-bottom:0;">Retour du Tuteur</h2>
+        <h2 class="panel-title" style="margin-bottom:0;">Retour du Maître de Stage</h2>
       </div>
 
       {% if derniere_evaluation %}

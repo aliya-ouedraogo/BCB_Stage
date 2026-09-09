@@ -9,7 +9,9 @@ from .models import (
     Entretien,
     Evaluation,
     Mission,
+    Notification,
     Presence,
+    ProfilDirecteur,
     ProfilMaitreStage,
     ProfilRH,
     ProfilStagiaire,
@@ -28,14 +30,43 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
-admin.site.register(ProfilStagiaire)
-admin.site.register(ProfilRH)
-admin.site.register(ProfilMaitreStage)
+class ProfilAutoCreeAdmin(admin.ModelAdmin):
+    """
+    Base pour les profils créés automatiquement (signal post_save pour
+    RH/Maître de Stage, ou Candidature.accepter() pour Stagiaire).
+    On retire le bouton "Ajouter" : en créer un manuellement ici entre
+    en conflit avec celui déjà créé automatiquement pour le même
+    utilisateur (contrainte unique sur user_id) — c'est exactement le
+    bug "Duplicata du champ ... pour la clef user_id" que ce garde-fou
+    empêche désormais.
+    """
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(ProfilStagiaire)
+class ProfilStagiaireAdmin(ProfilAutoCreeAdmin):
+    pass
+
+
+@admin.register(ProfilRH)
+class ProfilRHAdmin(ProfilAutoCreeAdmin):
+    pass
+
+
+@admin.register(ProfilMaitreStage)
+class ProfilMaitreStageAdmin(ProfilAutoCreeAdmin):
+    pass
+
+
+@admin.register(ProfilDirecteur)
+class ProfilDirecteurAdmin(ProfilAutoCreeAdmin):
+    list_display = ('user', 'poste')
 
 
 @admin.register(Departement)
 class DepartementAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'agence')
+    list_display = ('nom', 'agence', 'directeur')
     search_fields = ('nom', 'agence')
 
 
@@ -55,8 +86,14 @@ class StageAdmin(admin.ModelAdmin):
 
 @admin.register(DemandeEncadrement)
 class DemandeEncadrementAdmin(admin.ModelAdmin):
-    list_display = ('stage', 'maitre_de_stage_demande', 'statut', 'date_demande', 'date_reponse')
+    list_display = ('stage', 'maitre_de_stage_demande', 'proposee_par', 'statut', 'date_demande', 'date_reponse')
     list_filter = ('statut',)
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('destinataire', 'message', 'lu', 'date_creation')
+    list_filter = ('lu',)
 
 
 @admin.register(Entretien)

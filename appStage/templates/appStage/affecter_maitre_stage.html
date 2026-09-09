@@ -1,0 +1,57 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Affecter un Maître de Stage - BCBStageFlow{% endblock %}
+{% block page_title %}Affecter un Maître de Stage{% endblock %}
+{% block page_subtitle %}<span class="subtitle">Proposez un maître de stage pour vos stagiaires ; l'affectation ne devient effective qu'après son acceptation.</span>{% endblock %}
+
+{% block dashboard_content %}
+
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-title-row">
+      <span class="panel-title">Stagiaires en attente d'un maître de stage ({{ stages_en_attente|length }})</span>
+    </div>
+    {% for stage in stages_en_attente %}
+      <form method="post" class="person-row">
+        {% csrf_token %}
+        <input type="hidden" name="stage_id" value="{{ stage.id }}">
+        {% if stage.stagiaire.user.photo %}
+          <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
+        {% else %}
+          <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
+        {% endif %}
+        <div class="person-info">
+          <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
+          <span class="person-role">{{ stage.intitule_poste }}</span>
+        </div>
+        <select name="tuteur" class="form-select" required style="max-width:260px;">
+          <option value="">Choisir un maître de stage…</option>
+          {% for tuteur in tuteurs %}
+            <option value="{{ tuteur.id }}">{{ tuteur.user.get_full_name }}{% if tuteur.poste %} &bull; {{ tuteur.poste }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm">Proposer</button>
+      </form>
+    {% empty %}
+      <p style="color:var(--color-text-muted); font-size:14px;">Tous les stagiaires de votre service ont un maître de stage, ou une proposition est déjà en cours.</p>
+    {% endfor %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-title-row">
+      <span class="panel-title">Propositions en attente de réponse du maître de stage</span>
+    </div>
+    {% for demande in demandes_en_cours %}
+      <div class="person-row">
+        <span class="avatar"><i data-lucide="clock"></i></span>
+        <div class="person-info">
+          <span class="person-name">{{ demande.stage.stagiaire.user.get_full_name }}</span>
+          <span class="person-role">Proposé à {{ demande.maitre_de_stage_demande.user.get_full_name }}</span>
+        </div>
+        <span class="badge badge-warning">En attente</span>
+      </div>
+    {% empty %}
+      <p style="color:var(--color-text-muted); font-size:14px;">Aucune proposition en attente.</p>
+    {% endfor %}
+  </div>
+
+{% endblock %}

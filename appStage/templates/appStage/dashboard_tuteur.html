@@ -18,7 +18,7 @@
       {% if stages_encadres %}
         <div class="intern-grid">
           {% for stage in stages_encadres %}
-            <div class="intern-card">
+            <div class="intern-card{% if forloop.counter > 4 %} intern-card--masquee{% endif %}" {% if forloop.counter > 4 %}style="display:none;"{% endif %}>
               <div class="intern-card-head">
                 <div class="intern-identity">
                   {% if stage.stagiaire.user.photo %}
@@ -31,7 +31,9 @@
                     <span class="person-role">{{ stage.stagiaire.get_annee_etude_display }} &bull; {{ stage.stagiaire.filiere }}</span>
                   </div>
                 </div>
-                {% if stage.progression_pourcentage >= 70 %}
+                {% if stage.statut == 'TERMINE' %}
+                  <span class="badge badge-neutral">Terminé</span>
+                {% elif stage.progression_pourcentage >= 70 %}
                   <span class="badge badge-success">En cours</span>
                 {% else %}
                   <span class="badge badge-warning">Révision</span>
@@ -51,6 +53,11 @@
             </div>
           {% endfor %}
         </div>
+        {% if stages_encadres|length > 4 %}
+          <button type="button" class="btn btn-outline btn-sm" id="btn-voir-plus-stagiaires" style="margin-top:14px;">
+            Voir plus ({{ stages_encadres|length|add:"-4" }} restant{{ stages_encadres|length|add:"-4"|pluralize }})
+          </button>
+        {% endif %}
       {% else %}
         <div class="panel">
           <p style="color:var(--color-text-muted); font-size:14px;">
@@ -106,8 +113,11 @@
                 <i data-lucide="user-plus"></i>
               </span>
               <div class="todo-content" style="flex:1;">
-                <div class="todo-title">Demande d'encadrement</div>
-                <div class="todo-desc">{{ demande.stage.stagiaire.user.get_full_name }} souhaite vous avoir comme tuteur</div>
+                <div class="todo-title">Proposition d'encadrement</div>
+                <div class="todo-desc">
+                  Le directeur du service {{ demande.stage.departement.nom }} vous propose d'encadrer
+                  {{ demande.stage.stagiaire.user.get_full_name }}
+                </div>
                 <div style="display:flex; gap:8px; margin-top:8px;">
                   <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'accepter' %}">
                     {% csrf_token %}
@@ -122,7 +132,19 @@
             </div>
           {% endfor %}
 
-          {% if not rapports_a_valider and not demandes_en_attente %}
+          {% for entry in presences_a_confirmer %}
+            <a href="{% url 'appStage:fiche_stagiaire' entry.stage.id %}#presence" class="todo-item">
+              <span class="todo-icon" style="background:var(--color-success-bg); color:var(--color-success);">
+                <i data-lucide="calendar-check"></i>
+              </span>
+              <div class="todo-content">
+                <div class="todo-title">Présences à confirmer</div>
+                <div class="todo-desc">{{ entry.stage.stagiaire.user.get_full_name }} • {{ entry.nb }} jour{{ entry.nb|pluralize }} en attente</div>
+              </div>
+            </a>
+          {% endfor %}
+
+          {% if not rapports_a_valider and not demandes_en_attente and not presences_a_confirmer %}
             <p style="color:var(--color-text-muted); font-size:14px;">Rien à valider pour le moment.</p>
           {% endif %}
         </div>
@@ -131,5 +153,18 @@
       </div>
     </div>
   </div>
+
+  <script>
+    (function () {
+      var bouton = document.getElementById('btn-voir-plus-stagiaires');
+      if (!bouton) return;
+      bouton.addEventListener('click', function () {
+        document.querySelectorAll('.intern-card--masquee').forEach(function (carte) {
+          carte.style.display = '';
+        });
+        bouton.style.display = 'none';
+      });
+    })();
+  </script>
 
 {% endblock %}

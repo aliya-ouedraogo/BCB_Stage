@@ -19,13 +19,13 @@
       <div class="auth-visual"><img src="{% static 'appStage/img/bcb-siege.png' %}" alt="Siège de la BCB" class="auth-visual-img"></div>
       <div class="auth-copy">
         <h2>Bienvenue à bord !</h2>
-        <p>Votre candidature a été acceptée. Définissez votre mot de passe pour accéder à votre tableau de bord.</p>
+        <p>Votre candidature a été acceptée. Choisissez votre nom d'utilisateur et votre mot de passe pour accéder à votre tableau de bord.</p>
       </div>
     </section>
 
     <section class="auth-form-panel">
-      <h1>Créer votre mot de passe</h1>
-      <p class="auth-subtitle">Ce lien est à usage unique : votre compte sera activé une fois le mot de passe défini.</p>
+      <h1>Créer votre compte</h1>
+      <p class="auth-subtitle">Ce lien est à usage unique : votre compte sera activé une fois ces informations définies.</p>
 
       {% if form.non_field_errors %}
         <div class="form-errors">
@@ -35,6 +35,13 @@
 
       <form method="post" class="auth-fields">
         {% csrf_token %}
+
+        <div class="form-group">
+          <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+          {{ form.username }}
+          <span class="form-hint">{{ form.username.help_text }}</span>
+          {% for error in form.username.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
 
         <div class="form-group">
           <label for="{{ form.new_password1.id_for_label }}">Nouveau mot de passe</label>

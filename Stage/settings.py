@@ -77,6 +77,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'appStage.context_processors.nav_items',
+                'appStage.context_processors.notifications_cloche',
             ],
         },
     },
@@ -104,7 +105,16 @@ if os.environ.get('MYSQL_DATABASE'):
         'PASSWORD': os.environ.get('MYSQL_PASSWORD', ''),
         'HOST': os.environ.get('MYSQL_HOST', 'localhost'),
         'PORT': os.environ.get('MYSQL_PORT', '3306'),
-        'OPTIONS': {'charset': 'utf8mb4'},
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            # Le moteur par défaut du serveur MySQL peut être MyISAM (courant sur
+            # certaines installations Windows/XAMPP) — or MyISAM ignore silencieusement
+            # les transactions Django (pas de vrai rollback), ce qui peut laisser des
+            # comptes à moitié créés en cas d'échec. On force InnoDB pour toute
+            # nouvelle table créée par cette connexion, quel que soit le réglage
+            # global du serveur.
+            'init_command': "SET default_storage_engine=INNODB",
+        },
     }
 
 
