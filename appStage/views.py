@@ -317,7 +317,7 @@ def affecter_service(request):
                 if ancien_maitre_de_stage:
                     message += " Son ancien maître de stage a été désassigné : le nouveau directeur doit en choisir un autre."
                 messages.success(request, message)
-            return redirect('appStage:affecter_service')
+            return redirect(f"{reverse('appStage:affecter_service')}?maj={stage.id}")
         messages.error(request, "Formulaire invalide, réessayez.")
 
     total_stagiaires = stages.count()
@@ -333,6 +333,7 @@ def affecter_service(request):
         'total_stagiaires': total_stagiaires,
         'restants': max(0, total_stagiaires - limite),
         'departements': Departement.objects.all(),
+        'stage_maj': request.GET.get('maj', ''),
     }
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

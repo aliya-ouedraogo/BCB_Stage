@@ -1,18 +1,23 @@
 {% extends "appStage/base_dashboard.html" %}
 
 {% block title %}Services - BCBStageFlow{% endblock %}
-{% block page_title %}Services{% endblock %}
 
 {% block page_css %}
 <style>
-  .form-creer-departement { display: none; }
+  .form-creer-departement {
+    display: none;
+    margin: 20px 0;
+    padding: 18px;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+  }
   .form-creer-departement.open { display: block; }
 </style>
 {% endblock %}
 
 {% block dashboard_content %}
 
-  <div class="panel" style="margin-bottom:20px;">
+  <div class="panel">
     <div class="panel-title-row">
       <span class="panel-title">Services</span>
       <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('form-creer-departement').classList.toggle('open');">
@@ -21,7 +26,7 @@
     </div>
 
     <div class="form-creer-departement{% if form.errors %} open{% endif %}" id="form-creer-departement">
-      <form method="post" style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+      <form method="post" style="display:flex; flex-direction:column; gap:14px;">
         {% csrf_token %}
         {% if form.non_field_errors %}
           <div class="app-message app-message--error">
@@ -40,48 +45,51 @@
             {{ form.agence }}
           </div>
         </div>
-        <button type="submit" class="btn btn-primary" style="align-self:flex-start;">
-          <i data-lucide="plus"></i> Créer le service
-        </button>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="plus"></i> Créer le service
+          </button>
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('form-creer-departement').classList.remove('open');">Annuler</button>
+        </div>
       </form>
     </div>
-  </div>
 
-  <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
-    <i data-lucide="search"></i>
-    <input type="search" id="champ-recherche-departements" placeholder="Rechercher un service..." autocomplete="off">
-  </div>
+    <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
+      <i data-lucide="search"></i>
+      <input type="search" id="champ-recherche-departements" placeholder="Rechercher un service..." autocomplete="off">
+    </div>
 
-  <div class="panel" id="liste-departements">
-    {% for departement in departements %}
-      <div class="person-row" data-recherche="{{ departement.nom|lower }} {{ departement.agence|default:''|lower }}">
-        <span class="avatar"><i data-lucide="building"></i></span>
-        <div class="person-info">
-          <span class="person-name">{{ departement.nom }}</span>
-          <span class="person-role">
-            {% if departement.agence %}{{ departement.agence }} &bull; {% endif %}
-            {% if departement.directeur %}Dirigé par {{ departement.directeur.user.get_full_name }}{% else %}Aucun directeur assigné{% endif %}
+    <div id="liste-departements">
+      {% for departement in departements %}
+        <div class="person-row" data-recherche="{{ departement.nom|lower }} {{ departement.agence|default:''|lower }}">
+          <span class="avatar"><i data-lucide="building"></i></span>
+          <div class="person-info">
+            <span class="person-name">{{ departement.nom }}</span>
+            <span class="person-role">
+              {% if departement.agence %}{{ departement.agence }} &bull; {% endif %}
+              {% if departement.directeur %}Dirigé par {{ departement.directeur.user.get_full_name }}{% else %}Aucun directeur assigné{% endif %}
+            </span>
+          </div>
+          <span class="chip" style="min-width:150px; text-align:center;">
+            {{ departement.nb_stagiaires }} stagiaire{{ departement.nb_stagiaires|pluralize }} en cours
           </span>
+          <form method="post" action="{% url 'appStage:supprimer_departement' departement.id %}"
+            onsubmit="return confirm('Supprimer le service {{ departement.nom }} ? Cette action est impossible s\'il a des stagiaires (passés ou présents).');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce service">
+              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+            </button>
+          </form>
         </div>
-        <span class="chip" style="min-width:150px; text-align:center;">
-          {{ departement.nb_stagiaires }} stagiaire{{ departement.nb_stagiaires|pluralize }} en cours
-        </span>
-        <form method="post" action="{% url 'appStage:supprimer_departement' departement.id %}"
-          onsubmit="return confirm('Supprimer le service {{ departement.nom }} ? Cette action est impossible s\'il a des stagiaires (passés ou présents).');">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce service">
-            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-          </button>
-        </form>
-      </div>
-    {% empty %}
-      <div class="empty-state">
-        <i data-lucide="building"></i>
-        <h2>Aucun service enregistré</h2>
-        <p>Créez le premier service ci-dessus.</p>
-      </div>
-    {% endfor %}
-    <p id="aucun-resultat-departements" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun service ne correspond à cette recherche.</p>
+      {% empty %}
+        <div class="empty-state">
+          <i data-lucide="building"></i>
+          <h2>Aucun service enregistré</h2>
+          <p>Créez le premier service ci-dessus.</p>
+        </div>
+      {% endfor %}
+      <p id="aucun-resultat-departements" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun service ne correspond à cette recherche.</p>
+    </div>
   </div>
 
   <script>

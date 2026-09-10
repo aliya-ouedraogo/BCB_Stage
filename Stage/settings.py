@@ -77,7 +77,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'appStage.context_processors.nav_items',
-                'appStage.context_processors.notifications_cloche',
             ],
         },
     },

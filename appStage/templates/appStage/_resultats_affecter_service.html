@@ -1,5 +1,5 @@
 {% for stage in stages %}
-  <form method="post" class="person-row" style="flex-wrap:wrap;">
+  <form method="post" class="person-row affectation-row{% if stage_maj|stringformat:"s" == stage.id|stringformat:"s" %} affectation-row--maj{% endif %}" style="flex-wrap:wrap;">
     {% csrf_token %}
     <input type="hidden" name="stage_id" value="{{ stage.id }}">
     {% if stage.stagiaire.user.photo %}
@@ -8,25 +8,32 @@
       <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
     {% endif %}
     <div class="person-info">
-      <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
+      <span class="person-name" style="display:flex; align-items:center; gap:8px;">
+        {{ stage.stagiaire.user.get_full_name }}
+        {% if stage.statut == 'EN_COURS' %}
+          <span class="badge badge-success">En cours</span>
+        {% elif stage.statut == 'TERMINE' %}
+          <span class="badge badge-neutral">Terminé</span>
+        {% else %}
+          <span class="badge badge-info">{{ stage.get_statut_display }}</span>
+        {% endif %}
+      </span>
       <span class="person-role">
         {{ stage.intitule_poste }}
         {% if stage.maitre_de_stage %} &bull; {{ stage.maitre_de_stage.user.get_full_name }}{% endif %}
       </span>
     </div>
-    {% if stage.statut == 'EN_COURS' %}
-      <span class="badge badge-success">En cours</span>
-    {% elif stage.statut == 'TERMINE' %}
-      <span class="badge badge-neutral">Terminé</span>
-    {% else %}
-      <span class="badge badge-info">{{ stage.get_statut_display }}</span>
-    {% endif %}
-    <select name="departement" class="form-select" required style="max-width:220px;">
+    <select name="departement" class="form-select champ-departement" data-initial="{{ stage.departement_id }}" required style="max-width:220px;">
       {% for dep in departements %}
         <option value="{{ dep.id }}" {% if dep.id == stage.departement_id %}selected{% endif %}>{{ dep.nom }}</option>
       {% endfor %}
     </select>
-    <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+    <button type="submit" class="btn btn-outline btn-sm bouton-enregistrer" disabled>Enregistrer</button>
+    {% if stage_maj|stringformat:"s" == stage.id|stringformat:"s" %}
+      <span class="confirmation-enregistrement">
+        <i data-lucide="check-circle-2" style="width:15px;height:15px;"></i> Enregistré
+      </span>
+    {% endif %}
   </form>
 {% empty %}
   <p style="color:var(--color-text-muted); font-size:14px;">

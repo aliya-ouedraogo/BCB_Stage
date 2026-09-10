@@ -1,7 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
 {% block title %}Paramètres - BCBStageFlow{% endblock %}
-{% block page_title %}Paramètres{% endblock %}
 
 {% block dashboard_content %}
   <div class="settings-layout">
@@ -33,25 +32,6 @@
           <form method="post" enctype="multipart/form-data" class="auth-fields">
             {% csrf_token %}
             <input type="hidden" name="form_type" value="profil">
-
-            <div class="settings-avatar-row">
-              <div class="settings-avatar-wrap">
-                {% if user.photo %}
-                  <img src="{{ user.photo.url }}" alt="" class="settings-avatar" id="settings-avatar-preview">
-                {% else %}
-                  <span class="settings-avatar settings-avatar--placeholder" id="settings-avatar-preview">
-                    {{ user.first_name|first }}{{ user.last_name|first }}
-                  </span>
-                {% endif %}
-                <label for="{{ form.photo.id_for_label }}" class="settings-avatar-edit">
-                  <i data-lucide="pencil"></i>
-                </label>
-              </div>
-              <div class="form-group">
-                <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
-                {{ form.photo }}
-              </div>
-            </div>
 
             <div class="form-row">
               <div class="form-group">
@@ -169,23 +149,5 @@
       document.querySelector('.settings-panel[data-panel="' + tab.dataset.tab + '"]').classList.add('active');
     });
   });
-
-  var photoInput = document.getElementById('{{ form.photo.id_for_label }}');
-  if (photoInput) {
-    photoInput.addEventListener('change', function () {
-      if (!photoInput.files || !photoInput.files[0]) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var ancien = document.getElementById('settings-avatar-preview');
-        var nouveau = document.createElement('img');
-        nouveau.src = e.target.result;
-        nouveau.alt = '';
-        nouveau.className = 'settings-avatar';
-        nouveau.id = 'settings-avatar-preview';
-        ancien.replaceWith(nouveau);
-      };
-      reader.readAsDataURL(photoInput.files[0]);
-    });
-  }
 </script>
 {% endblock %}

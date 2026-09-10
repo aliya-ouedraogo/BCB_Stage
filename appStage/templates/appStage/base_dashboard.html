@@ -9,7 +9,7 @@
 {% block content %}
 <div class="dashboard-body">
 
-  <!-- ============== Sidebar (desktop) ============== -->
+  <!-- ============== Sidebar (desktop) — fixe, jamais remplacée par htmx ============== -->
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="brand">
@@ -20,13 +20,13 @@
         </div>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" hx-boost="true" hx-target="#contenu-page" hx-select="#contenu-page" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
         {% for item in nav_items %}
           <a href="{% url item.url_name %}"
              class="nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}" style="position:relative;">
             <i data-lucide="{{ item.icon }}"></i> {{ item.label }}
             {% if item.badge %}
-              <span class="badge badge-danger" style="margin-left:auto; min-width:20px; height:20px; border-radius:10px; font-size:11px; font-weight:700; padding:0 6px; display:inline-flex; align-items:center; justify-content:center;">{{ item.badge }}</span>
+              <span style="margin-left:auto; min-width:20px; height:20px; border-radius:10px; font-size:11px; font-weight:700; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; background:var(--color-danger); color:#fff;">{{ item.badge }}</span>
             {% endif %}
           </a>
         {% endfor %}
@@ -34,85 +34,64 @@
     </div>
   </aside>
 
-  <!-- ============== Zone principale ============== -->
-  <div class="dashboard-main">
-    <header class="topbar">
-      <div class="topbar-heading">
-        {% block page_eyebrow %}{% endblock %}
-        <h1>{% block page_title %}{% endblock %}</h1>
-        {% block page_subtitle %}{% endblock %}
-      </div>
+  <!-- ============== Zone qui change à chaque navigation (htmx) ============== -->
+  <div id="contenu-page">
+    <div class="dashboard-main">
+      <header class="topbar">
+        <div class="topbar-heading">
+          {% block page_eyebrow %}{% endblock %}
+          <h1>{% block page_title %}{% endblock %}</h1>
+          {% block page_subtitle %}{% endblock %}
+        </div>
 
-      <div class="topbar-actions">
-        <div class="notif-bell" style="position:relative;">
-          <button type="button" onclick="document.getElementById('notif-dropdown').classList.toggle('open');"
-                  style="position:relative; background:none; border:none; cursor:pointer; padding:6px;">
-            <i data-lucide="bell"></i>
-            {% if notifications_non_lues %}
-              <span class="badge badge-danger" style="position:absolute; top:0; right:0; min-width:16px; height:16px; padding:0 4px; font-size:10px; line-height:16px; border-radius:8px;">{{ notifications_non_lues }}</span>
-            {% endif %}
-          </button>
-          <div id="notif-dropdown" style="display:none; position:absolute; right:0; top:100%; width:320px; max-height:400px; overflow-y:auto; background:var(--color-surface, #fff); border:1px solid var(--color-border, #e5e7eb); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:50;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--color-border, #e5e7eb);">
-              <strong style="font-size:13px;">Notifications</strong>
-              {% if notifications_non_lues %}
-                <form method="post" action="{% url 'appStage:marquer_toutes_notifications_lues' %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.path }}">
-                  <button type="submit" style="border:none; background:none; color:var(--color-primary, #2563eb); font-size:12px; cursor:pointer;">Tout marquer lu</button>
-                </form>
-              {% endif %}
-            </div>
-            {% for notif in notifications_recentes %}
-              <form method="post" action="{% url 'appStage:marquer_notification_lue' notif.id %}">
-                {% csrf_token %}
-                <button type="submit" style="width:100%; text-align:left; border:none; background:{% if not notif.lu %}var(--color-info-bg, #eef4ff){% else %}transparent{% endif %}; padding:10px 14px; font-size:12.5px; cursor:pointer; border-bottom:1px solid var(--color-border, #f0f0f0);">
-                  {{ notif.message }}
-                  <div style="color:var(--color-text-muted); font-size:11px; margin-top:2px;">{{ notif.date_creation|timesince }}</div>
-                </button>
-              </form>
-            {% empty %}
-              <p style="padding:16px 14px; color:var(--color-text-muted); font-size:12.5px;">Aucune notification pour le moment.</p>
+        <div class="topbar-actions">
+          <a href="{% url 'appStage:parametres' %}" class="topbar-user"
+             hx-boost="true" hx-target="#contenu-page" hx-select="#contenu-page" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
+            <span class="user-avatar">
+              {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+              {% else %}<i data-lucide="user"></i>{% endif %}
+            </span>
+            <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+            <i data-lucide="chevron-down"></i>
+          </a>
+        </div>
+      </header>
+
+      <main class="dashboard-content">
+        {% if messages %}
+          <div class="messages-list">
+            {% for message in messages %}
+              <div class="app-message app-message--{{ message.tags|default:'info' }}">
+                {{ message }}
+              </div>
             {% endfor %}
           </div>
-        </div>
-        <a href="{% url 'appStage:parametres' %}" class="topbar-user">
-          <span class="user-avatar">
-            {% if user.photo %}<img src="{{ user.photo.url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
-            {% else %}<i data-lucide="user"></i>{% endif %}
-          </span>
-          <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
-          <i data-lucide="chevron-down"></i>
-        </a>
-      </div>
-    </header>
+        {% endif %}
 
-    <main class="dashboard-content">
-      {% if messages %}
-        <div class="messages-list">
-          {% for message in messages %}
-            <div class="app-message app-message--{{ message.tags|default:'info' }}">
-              {{ message }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
+        {% block dashboard_content %}{% endblock %}
+      </main>
+    </div>
 
-      {% block dashboard_content %}{% endblock %}
-    </main>
+    <script>
+      document.querySelectorAll('[data-progression]').forEach(function (el) {
+        var bar = el.querySelector('span');
+        if (bar) bar.style.width = el.dataset.progression + '%';
+      });
+    </script>
+    {% block page_js %}{% endblock %}
   </div>
 
 </div>
 
-<!-- ============== Barre de navigation mobile ============== -->
-<nav class="bottom-nav">
+<!-- ============== Barre de navigation mobile — fixe elle aussi ============== -->
+<nav class="bottom-nav" hx-boost="true" hx-target="#contenu-page" hx-select="#contenu-page" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
   {% for item in nav_items %}
     <a href="{% url item.url_name %}"
        class="bottom-nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}" style="position:relative;">
       <i data-lucide="{{ item.icon }}"></i>
       <span>{{ item.label }}</span>
       {% if item.badge %}
-        <span class="badge badge-danger" style="position:absolute; top:2px; right:14px; min-width:16px; height:16px; border-radius:8px; font-size:10px; font-weight:700; padding:0 4px; display:inline-flex; align-items:center; justify-content:center;">{{ item.badge }}</span>
+        <span style="position:absolute; top:2px; right:14px; min-width:16px; height:16px; border-radius:8px; font-size:10px; font-weight:700; padding:0 4px; display:inline-flex; align-items:center; justify-content:center; background:var(--color-danger); color:#fff;">{{ item.badge }}</span>
       {% endif %}
     </a>
   {% endfor %}
@@ -121,10 +100,27 @@
 
 {% block extra_js %}
   <script>
-    document.querySelectorAll('[data-progression]').forEach(function (el) {
-      var bar = el.querySelector('span');
-      if (bar) bar.style.width = el.dataset.progression + '%';
+    // La sidebar/nav mobile ne sont jamais remplacées par htmx (voir hx-select
+    // plus haut) : après chaque navigation, on met nous-mêmes à jour la classe
+    // "active" en comparant l'URL courante à chaque lien, et on regénère les
+    // icônes lucide qui viennent d'arriver dans le nouveau contenu.
+    document.body.addEventListener('htmx:afterSettle', function () {
+      var chemin = window.location.pathname;
+      document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(function (lien) {
+        lien.classList.toggle('active', lien.getAttribute('href') === chemin);
+      });
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    // Filet de sécurité : si une navigation htmx échoue (session expirée,
+    // erreur serveur, réponse sans #contenu-page...), on retombe sur une
+    // navigation classique plutôt que de rester bloqué sur une page à moitié
+    // rafraîchie.
+    document.body.addEventListener('htmx:responseError', function (evenement) {
+      window.location.href = evenement.detail.xhr.responseURL || window.location.href;
+    });
+    document.body.addEventListener('htmx:sendError', function () {
+      window.location.reload();
     });
   </script>
-  {% block page_js %}{% endblock %}
 {% endblock %}

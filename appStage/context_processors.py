@@ -48,18 +48,3 @@ def _nb_candidatures_en_attente():
     """Nombre de candidatures pas encore traitées, pour le badge de la sidebar RH."""
     from .models import Candidature
     return Candidature.objects.filter(statut=Candidature.Statut.EN_ATTENTE).count()
-
-
-def notifications_cloche(request):
-    """
-    Fournit les notifications récentes (et le nombre de non-lues) pour la
-    cloche affichée dans le topbar de base_dashboard.html, pour les 4 rôles.
-    """
-    if not request.user.is_authenticated or not getattr(request.user, 'role', None):
-        return {}
-
-    qs = request.user.notifications.all()
-    return {
-        'notifications_recentes': qs[:8],
-        'notifications_non_lues': qs.filter(lu=False).count(),
-    }

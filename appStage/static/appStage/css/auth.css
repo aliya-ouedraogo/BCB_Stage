@@ -104,8 +104,9 @@
 .auth-form-panel--compact .form-group select { height: 40px; }
 
 .auth-form-panel h1 {
+  font-family: var(--font-heading);
   font-size: 40px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   background: linear-gradient(90deg, var(--color-text) 40%, var(--color-primary) 100%);
   -webkit-background-clip: text;
@@ -180,7 +181,7 @@
   gap: 14px;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.form-group { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
 .form-group label {
   font-size: 13px;
@@ -232,7 +233,7 @@
 .homepage-section--alt { background: var(--color-surface); }
 .homepage-section-inner { max-width: 1080px; margin: 0 auto; text-align: center; }
 
-.homepage-section-title { font-size: 30px; font-weight: 800; letter-spacing: -0.01em; }
+.homepage-section-title { font-family: var(--font-heading); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
 .homepage-section-subtitle {
   font-size: 15px;
   color: var(--color-text-muted);

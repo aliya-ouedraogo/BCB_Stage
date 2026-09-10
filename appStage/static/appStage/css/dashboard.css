@@ -48,7 +48,7 @@
 .brand-logo-img { width: 100%; height: 100%; object-fit: cover; }
 
 .brand-text { display: flex; flex-direction: column; line-height: 1.25; }
-.brand-name { font-size: 16px; font-weight: 700; }
+.brand-name { font-family: var(--font-heading); font-size: 16px; font-weight: 700; }
 .brand-sub { font-size: 12px; color: #9a9ab0; }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
@@ -103,6 +103,16 @@
 /* ---------------------------------------------------------
    Zone principale + Topbar
    --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   Zone remplacée par htmx à chaque navigation (#contenu-page).
+   C'est elle qui est désormais l'enfant flex direct de
+   .dashboard-body (la sidebar étant fixe) : elle doit donc
+   porter les règles d'étirement auparavant sur .dashboard-main,
+   sans quoi tout son contenu se retrouve tassé à sa largeur
+   naturelle au lieu de remplir l'espace disponible.
+   --------------------------------------------------------- */
+#contenu-page { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
 .dashboard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 .topbar {
@@ -122,13 +132,16 @@
 }
 
 .topbar-heading h1 {
+  font-family: var(--font-heading);
   font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
+.topbar-heading h1:empty { display: none; }
 
 .topbar-heading .subtitle {
   margin-top: 6px;
@@ -388,6 +401,7 @@
 
 .tab-group {
   display: inline-flex;
+  align-self: flex-start;
   gap: 2px;
   padding: 4px;
   border-radius: var(--radius-pill);
@@ -544,7 +558,7 @@ a.todo-item:hover { background: var(--color-bg); }
 .todo-content .todo-title { font-size: 14px; font-weight: 700; line-height: 1.35; }
 .todo-content .todo-desc { font-size: 13px; color: var(--color-text-muted); margin-top: 3px; }
 
-.panel-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.panel-title { font-family: var(--font-heading); font-size: 17px; font-weight: 700; margin-bottom: 16px; }
 .panel-title-row {
   display: flex;
   align-items: center;
@@ -570,7 +584,7 @@ a.todo-item:hover { background: var(--color-bg); }
    --------------------------------------------------------- */
 .intern-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
 
@@ -743,6 +757,55 @@ a.todo-item:hover { background: var(--color-bg); }
   border-radius: var(--radius-pill);
   background: #f0f0f3;
   color: var(--color-text-muted);
+}
+
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 9px 34px 9px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.form-select:hover { border-color: var(--color-primary); }
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.form-select:disabled { opacity: 0.55; cursor: not-allowed; background-color: #f7f7f9; }
+
+.bouton-enregistrer:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.affectation-row--maj {
+  animation: affectation-flash 2.2s ease-out 1;
+}
+
+@keyframes affectation-flash {
+  0% { background-color: var(--color-success-bg); }
+  100% { background-color: transparent; }
+}
+
+.confirmation-enregistrement {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-success);
 }
 
 .doc-row {
@@ -1178,7 +1241,7 @@ a.todo-item:hover { background: var(--color-bg); }
 /* ---------------------------------------------------------
    Champs de formulaire (candidatures, évaluation, paramètres...)
    --------------------------------------------------------- */
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group { display: flex; flex-direction: column; gap: 12px; }
 .form-group label { font-size: 13px; font-weight: 600; color: var(--color-text); }
 
 .form-group input,
@@ -1234,7 +1297,7 @@ a.todo-item:hover { background: var(--color-bg); }
   color: var(--color-text-muted);
 }
 .empty-state i { width: 32px; height: 32px; color: var(--color-text-faint); }
-.empty-state h2 { color: var(--color-text); margin-top: 14px; font-size: 18px; }
+.empty-state h2 { font-family: var(--font-heading); color: var(--color-text); margin-top: 14px; font-size: 18px; }
 .empty-state p { font-size: 14px; margin-top: 6px; max-width: 360px; margin-left: auto; margin-right: auto; }
 
 /* ---------------------------------------------------------

@@ -7,11 +7,22 @@
   <title>{% block title %}BCBStageFlow{% endblock %}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{% static 'appStage/css/variables.css' %}">
   <link rel="stylesheet" href="{% static 'appStage/css/base.css' %}">
   {% block extra_css %}{% endblock %}
+
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script>
+    // Empêche htmx de réutiliser un instantané HTML mis en cache lors d'une
+    // navigation (retour arrière, ou parfois même un clic normal) : sans ça,
+    // des éléments avec un état modifié par du JS (panneau déplié, onglet
+    // actif, etc.) peuvent réapparaître dans leur ancien état au lieu de
+    // refléter ce que le serveur renvoie vraiment pour cette page.
+    htmx.config.refreshOnHistoryMiss = true;
+    htmx.config.historyCacheSize = 0;
+  </script>
 </head>
 <body>
   {% block content %}{% endblock %}

@@ -1,7 +1,6 @@
 {% extends "appStage/base_dashboard.html" %}
 
 {% block title %}Affectation - BCBStageFlow{% endblock %}
-{% block page_title %}Affectation{% endblock %}
 
 {% block dashboard_content %}
   <form method="get" id="form-recherche-affectation" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px; margin-bottom:16px;">
@@ -62,6 +61,20 @@
         if (!bouton) return;
         if (champLimite) champLimite.value = parseInt(bouton.dataset.limiteActuelle || '10', 10) + 10;
         rafraichirResultats();
+      });
+
+      // Le bouton "Enregistrer" d'une ligne ne s'active que si le service
+      // sélectionné diffère réellement du service actuel du stagiaire —
+      // impossible de cliquer "pour rien".
+      resultats.addEventListener('change', function (evenement) {
+        var select = evenement.target.closest('.champ-departement');
+        if (!select) return;
+        var bouton = select.closest('form').querySelector('.bouton-enregistrer');
+        if (!bouton) return;
+        var modifie = select.value !== select.dataset.initial;
+        bouton.disabled = !modifie;
+        bouton.classList.toggle('btn-primary', modifie);
+        bouton.classList.toggle('btn-outline', !modifie);
       });
 
       // Après un changement de service (POST classique), on revient sur

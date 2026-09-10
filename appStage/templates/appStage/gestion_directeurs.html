@@ -1,27 +1,32 @@
 {% extends "appStage/base_dashboard.html" %}
 
 {% block title %}Directeurs - BCBStageFlow{% endblock %}
-{% block page_title %}Directeurs{% endblock %}
 
 {% block page_css %}
 <style>
-  .form-creer-directeur { display: none; }
+  .form-creer-directeur {
+    display: none;
+    margin: 20px 0;
+    padding: 18px;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+  }
   .form-creer-directeur.open { display: block; }
 </style>
 {% endblock %}
 
 {% block dashboard_content %}
 
-  <div class="panel" style="margin-bottom:20px;">
+  <div class="panel">
     <div class="panel-title-row">
       <span class="panel-title">Directeurs</span>
-      <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('form-creer-directeur').classList.toggle('open');">
+      <button type="button" class="btn btn-primary btn-sm" id="btn-toggle-creer-directeur" onclick="document.getElementById('form-creer-directeur').classList.toggle('open');">
         <i data-lucide="plus"></i> Créer
       </button>
     </div>
 
     <div class="form-creer-directeur{% if form.errors %} open{% endif %}" id="form-creer-directeur">
-      <form method="post" id="form-creer-directeur-envoi" style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+      <form method="post" id="form-creer-directeur-envoi" style="display:flex; flex-direction:column; gap:14px;">
         {% csrf_token %}
         {% if form.non_field_errors %}
           <div class="app-message app-message--error">
@@ -53,10 +58,54 @@
           </div>
         </div>
         <span class="form-hint">Un e-mail lui sera envoyé pour qu'il définisse lui-même son mot de passe. Seuls les départements sans directeur apparaissent dans la liste.</span>
-        <button type="submit" class="btn btn-primary" id="btn-creer-directeur" style="align-self:flex-start;">
-          <i data-lucide="send"></i> Créer et inviter
-        </button>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary" id="btn-creer-directeur">
+            <i data-lucide="send"></i> Créer et inviter
+          </button>
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('form-creer-directeur').classList.remove('open');">Annuler</button>
+        </div>
       </form>
+    </div>
+
+    <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
+      <i data-lucide="search"></i>
+      <input type="search" id="champ-recherche-directeurs" placeholder="Rechercher un directeur..." autocomplete="off">
+    </div>
+
+    <div id="liste-directeurs">
+      {% for directeur in directeurs %}
+        <div class="person-row" data-recherche="{{ directeur.user.get_full_name|lower }} {{ directeur.poste|default:''|lower }} {{ directeur.departement.nom|default:''|lower }} {{ directeur.user.email|lower }}">
+          {% if directeur.user.photo %}
+            <img class="avatar" src="{{ directeur.user.photo.url }}" alt="">
+          {% else %}
+            <span class="avatar">{{ directeur.user.first_name|first }}{{ directeur.user.last_name|first }}</span>
+          {% endif %}
+          <div class="person-info">
+            <span class="person-name">{{ directeur.user.get_full_name }}</span>
+            <span class="person-role">
+              {{ directeur.poste|default:"Poste non renseigné" }}
+              &bull; {{ directeur.user.email }}
+            </span>
+          </div>
+          <span class="chip" style="min-width:150px; text-align:center;">
+            {% if directeur.departement %}{{ directeur.departement.nom }}{% else %}Aucun département{% endif %}
+          </span>
+          <form method="post" action="{% url 'appStage:supprimer_directeur' directeur.id %}"
+            onsubmit="return confirm('Supprimer le compte de {{ directeur.user.get_full_name }} ?{% if directeur.departement %} Le service {{ directeur.departement.nom }} se retrouvera sans directeur.{% endif %}');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce compte directeur">
+              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+            </button>
+          </form>
+        </div>
+      {% empty %}
+        <div class="empty-state">
+          <i data-lucide="user-x"></i>
+          <h2>Aucun directeur enregistré</h2>
+          <p>Créez le premier compte directeur ci-dessus.</p>
+        </div>
+      {% endfor %}
+      <p id="aucun-resultat-directeurs" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun directeur ne correspond à cette recherche.</p>
     </div>
   </div>
 
@@ -71,47 +120,6 @@
       });
     })();
   </script>
-
-  <div class="input-icon-wrap" style="max-width:420px; width:100%; position:relative; margin-bottom:16px;">
-    <i data-lucide="search"></i>
-    <input type="search" id="champ-recherche-directeurs" placeholder="Rechercher un directeur..." autocomplete="off">
-  </div>
-
-  <div class="panel" id="liste-directeurs">
-    {% for directeur in directeurs %}
-      <div class="person-row" data-recherche="{{ directeur.user.get_full_name|lower }} {{ directeur.poste|default:''|lower }} {{ directeur.departement.nom|default:''|lower }} {{ directeur.user.email|lower }}">
-        {% if directeur.user.photo %}
-          <img class="avatar" src="{{ directeur.user.photo.url }}" alt="">
-        {% else %}
-          <span class="avatar">{{ directeur.user.first_name|first }}{{ directeur.user.last_name|first }}</span>
-        {% endif %}
-        <div class="person-info">
-          <span class="person-name">{{ directeur.user.get_full_name }}</span>
-          <span class="person-role">
-            {{ directeur.poste|default:"Poste non renseigné" }}
-            &bull; {{ directeur.user.email }}
-          </span>
-        </div>
-        <span class="chip" style="min-width:150px; text-align:center;">
-          {% if directeur.departement %}{{ directeur.departement.nom }}{% else %}Aucun département{% endif %}
-        </span>
-        <form method="post" action="{% url 'appStage:supprimer_directeur' directeur.id %}"
-          onsubmit="return confirm('Supprimer le compte de {{ directeur.user.get_full_name }} ?{% if directeur.departement %} Le service {{ directeur.departement.nom }} se retrouvera sans directeur.{% endif %}');">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-outline btn-sm" title="Supprimer ce compte directeur">
-            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-          </button>
-        </form>
-      </div>
-    {% empty %}
-      <div class="empty-state">
-        <i data-lucide="user-x"></i>
-        <h2>Aucun directeur enregistré</h2>
-        <p>Créez le premier compte directeur ci-dessus.</p>
-      </div>
-    {% endfor %}
-    <p id="aucun-resultat-directeurs" style="display:none; color:var(--color-text-muted); font-size:14px;">Aucun directeur ne correspond à cette recherche.</p>
-  </div>
 
   <script>
     (function () {
