@@ -26,9 +26,11 @@
       <div class="panel">
         <div class="panel-title-row">
           <span class="panel-title">Stagiaires du service ({{ stages_service|length }})</span>
-          <a href="{% url 'appStage:affecter_maitre_stage' %}" class="btn btn-outline btn-sm">
-            <i data-lucide="user-check"></i> Affecter un maître de stage
-          </a>
+          <div style="display:flex; gap:8px;">
+            <a href="{% url 'appStage:affecter_maitre_stage' %}" class="btn btn-outline btn-sm">
+              <i data-lucide="user-check"></i> Affecter un maître de stage
+            </a>
+          </div>
         </div>
         {% for stage in stages_service %}
           <div class="person-row">
@@ -54,6 +56,10 @@
     </div>
 
     <div class="dash-col">
+      <div>
+        {% include "appStage/_stat_donut.html" with stats=stats_encadrement titre="Encadrement du service" sous_titre="Stagiaires" %}
+      </div>
+
       <div class="panel">
         <div class="panel-title-row">
           <span class="panel-title">Propositions en attente de réponse</span>
@@ -73,7 +79,7 @@
         {% endfor %}
       </div>
 
-      <div class="panel" style="margin-top:18px;">
+      <div class="panel">
         <div class="panel-title-row">
           <span class="panel-title">Documents récents</span>
           <a href="{% url 'appStage:documents_recus_directeur' %}" class="list-cta" style="text-decoration:none;">Tout voir</a>

@@ -2,13 +2,16 @@
 
 {% block title %}Paramètres - BCBStageFlow{% endblock %}
 
+<!-- Sur cette page, la pastille de profil en haut a droite est redondante (on est deja sur la page du compte) : on la retire, espace compris. -->
+{% block topbar_actions %}{% endblock %}
+
 {% block dashboard_content %}
   <div class="settings-layout">
 
     <!-- Onglets latéraux -->
     <nav class="settings-tabs">
-      <button class="settings-tab active" data-tab="profil"><i data-lucide="user"></i> Profil</button>
-      <button class="settings-tab" data-tab="securite"><i data-lucide="shield"></i> Sécurité</button>
+      <button class="settings-tab {% if onglet_actif == 'profil' %}active{% endif %}" data-tab="profil"><i data-lucide="user"></i> Profil</button>
+      <button class="settings-tab {% if onglet_actif == 'securite' %}active{% endif %}" data-tab="securite"><i data-lucide="shield"></i> Sécurité</button>
       <button class="settings-tab" data-tab="compte"><i data-lucide="user-cog"></i> Compte</button>
       <button class="settings-tab" data-tab="notifications"><i data-lucide="bell"></i> Notifications</button>
     </nav>
@@ -16,15 +19,8 @@
     <div class="settings-content">
 
       <!-- Onglet Profil -->
-      <div class="settings-panel active" data-panel="profil">
+      <div class="settings-panel {% if onglet_actif == 'profil' %}active{% endif %}" data-panel="profil">
         <div class="panel">
-          <div class="panel-title-row">
-            <div>
-              <h2 class="panel-title" style="margin-bottom:2px;">Informations personnelles</h2>
-              <p style="font-size:13px; color:var(--color-text-muted);">Mettez à jour vos informations de profil ci-dessous.</p>
-            </div>
-          </div>
-
           {% if form.non_field_errors %}
             <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
           {% endif %}
@@ -32,6 +28,29 @@
           <form method="post" enctype="multipart/form-data" class="auth-fields">
             {% csrf_token %}
             <input type="hidden" name="form_type" value="profil">
+
+            <div class="settings-avatar-row">
+              <div class="settings-avatar-wrap">
+                <img id="apercu-avatar" class="settings-avatar" alt=""
+                     src="{% if user.photo %}{{ user.photo.url }}{% endif %}"
+                     {% if not user.photo %}style="display:none;"{% endif %}>
+                <span id="avatar-placeholder" class="settings-avatar settings-avatar--placeholder"
+                      {% if user.photo %}style="display:none;"{% endif %}>{{ user.first_name|first }}{{ user.last_name|first }}</span>
+                <label for="{{ form.photo.id_for_label }}" class="settings-avatar-edit" title="Changer la photo de profil">
+                  <i data-lucide="pencil"></i>
+                </label>
+              </div>
+              <div>
+                <div style="font-weight:700; font-size:15px;">{{ user.get_full_name|default:user.username }}</div>
+                <div style="font-size:13px; color:var(--color-text-muted); margin-top:2px;">
+                  Cliquez sur le crayon pour changer votre photo, puis enregistrez.
+                </div>
+              </div>
+              <div class="form-group">
+                {{ form.photo }}
+                {% for e in form.photo.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+              </div>
+            </div>
 
             <div class="form-row">
               <div class="form-group">
@@ -72,7 +91,7 @@
       </div>
 
       <!-- Onglet Sécurité -->
-      <div class="settings-panel" data-panel="securite">
+      <div class="settings-panel {% if onglet_actif == 'securite' %}active{% endif %}" data-panel="securite">
         <div class="panel">
           <h2 class="panel-title" style="margin-bottom:2px;">Changer de mot de passe</h2>
           <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">Choisissez un mot de passe robuste, que vous n'utilisez pas ailleurs.</p>
@@ -127,7 +146,7 @@
           <div style="font-weight:700; font-size:14.5px;">Se déconnecter</div>
           <div style="font-size:13px; color:var(--color-text-muted); margin-top:2px;">Met fin à votre session sur cet appareil.</div>
         </div>
-        <form method="post" action="{% url 'appStage:logout' %}">
+        <form method="post" action="{% url 'appStage:logout' %}" hx-boost="false">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm btn-danger-soft">
             <i data-lucide="log-out"></i> Déconnexion
@@ -149,5 +168,23 @@
       document.querySelector('.settings-panel[data-panel="' + tab.dataset.tab + '"]').classList.add('active');
     });
   });
+
+  // Aperçu immédiat de la photo choisie, avant même d'enregistrer.
+  var inputPhoto = document.getElementById('{{ form.photo.id_for_label }}');
+  var apercuAvatar = document.getElementById('apercu-avatar');
+  var placeholderAvatar = document.getElementById('avatar-placeholder');
+  if (inputPhoto) {
+    inputPhoto.addEventListener('change', function () {
+      var fichier = inputPhoto.files[0];
+      if (!fichier) return;
+      var lecteur = new FileReader();
+      lecteur.onload = function (evenement) {
+        apercuAvatar.src = evenement.target.result;
+        apercuAvatar.style.display = 'block';
+        if (placeholderAvatar) placeholderAvatar.style.display = 'none';
+      };
+      lecteur.readAsDataURL(fichier);
+    });
+  }
 </script>
 {% endblock %}

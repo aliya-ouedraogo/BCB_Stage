@@ -1,0 +1,27 @@
+<div class="panel">
+  <div class="panel-title-row">
+    <span class="panel-title">{{ titre }}</span>
+  </div>
+
+  {% if stats.total %}
+    <div class="stat-donut-row">
+      <div class="stat-donut" style="background: {{ stats.gradient_css }};">
+        <div class="stat-donut-hole">
+          <span class="stat-donut-total">{{ stats.total }}</span>
+          <span class="stat-donut-caption">{{ sous_titre }}</span>
+        </div>
+      </div>
+      <ul class="stat-donut-legend">
+        {% for segment in stats.segments %}
+          <li>
+            <span class="stat-donut-dot" style="background: {{ segment.couleur }};"></span>
+            {{ segment.label }}
+            <strong>{{ segment.pourcentage }}%</strong>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <p class="stat-donut-empty">Pas encore assez de données pour afficher une répartition.</p>
+  {% endif %}
+</div>

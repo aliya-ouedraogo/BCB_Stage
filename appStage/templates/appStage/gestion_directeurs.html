@@ -20,9 +20,14 @@
   <div class="panel">
     <div class="panel-title-row">
       <span class="panel-title">Directeurs</span>
-      <button type="button" class="btn btn-primary btn-sm" id="btn-toggle-creer-directeur" onclick="document.getElementById('form-creer-directeur').classList.toggle('open');">
-        <i data-lucide="plus"></i> Créer
-      </button>
+      <div style="display:flex; gap:8px;">
+        <a href="{% url 'appStage:exporter_directeurs_csv' %}" class="btn btn-outline btn-sm" hx-boost="false">
+          <i data-lucide="download"></i> Exporter
+        </a>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-toggle-creer-directeur" onclick="document.getElementById('form-creer-directeur').classList.toggle('open');">
+          <i data-lucide="plus"></i> Créer
+        </button>
+      </div>
     </div>
 
     <div class="form-creer-directeur{% if form.errors %} open{% endif %}" id="form-creer-directeur">
@@ -117,6 +122,7 @@
       form.addEventListener('submit', function () {
         bouton.disabled = true;
         bouton.innerHTML = '<i data-lucide="loader-2"></i> Création…';
+        if (window.lucide) window.lucide.createIcons();
       });
     })();
   </script>

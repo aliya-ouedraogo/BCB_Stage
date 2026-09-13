@@ -15,18 +15,23 @@ urlpatterns = [
     # --- RH ---
     path('rh/', views.dashboard_rh, name='dashboard_rh'),
     path('rh/stagiaires/', views.liste_stagiaires, name='liste_stagiaires'),
+    path('rh/stagiaires/export/', views.exporter_stagiaires_csv, name='exporter_stagiaires_csv'),
     path('rh/affecter-service/', views.affecter_service, name='affecter_service'),
     path('rh/candidatures/', views.candidatures, name='candidatures'),
+    path('rh/candidatures/export/', views.exporter_candidatures_csv, name='exporter_candidatures_csv'),
     path('rh/candidatures/<int:candidature_id>/accepter/', views.accepter_candidature, name='accepter_candidature'),
     path('rh/candidatures/<int:candidature_id>/refuser/', views.refuser_candidature, name='refuser_candidature'),
     path('rh/candidatures/<int:candidature_id>/supprimer/', views.supprimer_candidature, name='supprimer_candidature'),
     path('rh/documents/', views.documents_recus_rh, name='documents_recus_rh'),
     path('rh/documents/envoyer/<int:stage_id>/', views.envoyer_document_rh, name='envoyer_document_rh'),
     path('rh/tuteurs/', views.gestion_tuteurs, name='gestion_tuteurs'),
+    path('rh/tuteurs/export/', views.exporter_tuteurs_csv, name='exporter_tuteurs_csv'),
     path('rh/tuteurs/<int:tuteur_id>/supprimer/', views.supprimer_tuteur, name='supprimer_tuteur'),
     path('rh/directeurs/', views.gestion_directeurs, name='gestion_directeurs'),
+    path('rh/directeurs/export/', views.exporter_directeurs_csv, name='exporter_directeurs_csv'),
     path('rh/directeurs/<int:directeur_id>/supprimer/', views.supprimer_directeur, name='supprimer_directeur'),
     path('rh/services/', views.gestion_departements, name='gestion_departements'),
+    path('rh/services/export/', views.exporter_departements_csv, name='exporter_departements_csv'),
     path('rh/services/<int:departement_id>/supprimer/', views.supprimer_departement, name='supprimer_departement'),
 
     # --- Directeur de service ---

@@ -33,7 +33,7 @@
         </div>
       {% endif %}
 
-      <form method="post" class="auth-fields">
+      <form method="post" class="auth-fields" hx-boost="false">
         {% csrf_token %}
 
         <div class="form-group">

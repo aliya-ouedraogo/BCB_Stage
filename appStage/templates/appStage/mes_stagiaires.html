@@ -9,9 +9,11 @@
       <button type="button" class="tab-item" data-filtre="EN_COURS">En cours</button>
       <button type="button" class="tab-item" data-filtre="TERMINE">Terminés</button>
     </div>
-    <a href="{% url 'appStage:assigner_mission' %}" class="btn btn-primary">
-      <i data-lucide="clipboard-list"></i> Assigner une mission
-    </a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a href="{% url 'appStage:assigner_mission' %}" class="btn btn-primary">
+        <i data-lucide="clipboard-list"></i> Assigner une mission
+      </a>
+    </div>
   </div>
   <div class="panel" id="liste-mes-stagiaires">
     {% for stage in stages %}

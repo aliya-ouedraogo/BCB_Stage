@@ -1,4 +1,6 @@
+import csv
 import datetime
+from collections import Counter
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -7,8 +9,8 @@ from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.conf import settings
 from django.db import IntegrityError
-from django.db.models import Count, ProtectedError, Q
-from django.http import Http404
+from django.db.models import Case, Count, IntegerField, ProtectedError, Q, Value, When
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -53,6 +55,53 @@ from .models import (
     Stage,
     User,
 )
+
+
+# =========================================================
+# Utilitaires : export CSV & répartitions en donut
+# =========================================================
+
+def _reponse_csv(nom_fichier, entetes, lignes):
+    """
+    Construit une réponse CSV téléchargeable (séparateur ';' et BOM UTF-8,
+    pour qu'Excel en français affiche correctement les accents sans réglage
+    manuel de l'utilisateur).
+    """
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
+    response.write('\ufeff')
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(entetes)
+    writer.writerows(lignes)
+    return response
+
+
+def _repartition_donut(paires, palette=None):
+    """
+    Transforme une liste de (label, effectif) déjà regroupée en données prêtes
+    pour un graphique en anneau CSS (conic-gradient) : segments avec couleur
+    et pourcentage, plus la chaîne de dégradé toute faite.
+    """
+    palette = palette or ['#6d5ef8', '#16a34a', '#f59e0b', '#0ea5e9', '#f43f5e', '#94a3b8']
+    paires = [(label, count) for label, count in paires if count]
+    total = sum(count for _, count in paires)
+
+    if not total:
+        return {'total': 0, 'segments': [], 'gradient_css': 'conic-gradient(#e9e9ee 0% 100%)'}
+
+    segments, stops, cumul = [], [], 0.0
+    for i, (label, count) in enumerate(paires):
+        couleur = palette[i % len(palette)]
+        debut = cumul
+        cumul += count * 100 / total
+        segments.append({
+            'label': label, 'count': count,
+            'pourcentage': round(count * 100 / total),
+            'couleur': couleur,
+        })
+        stops.append(f"{couleur} {debut:.2f}% {cumul:.2f}%")
+
+    return {'total': total, 'segments': segments, 'gradient_css': "conic-gradient(" + ", ".join(stops) + ")"}
 
 
 # =========================================================
@@ -231,8 +280,8 @@ def dashboard_rh(request):
     return render(request, 'appStage/dashboard_rh.html', context)
 
 
-@role_required(User.Role.RH)
-def liste_stagiaires(request):
+def _stages_filtres(request):
+    """Requête + filtres partagés entre la page Stagiaires (RH) et son export CSV."""
     Stage.synchroniser_statuts()
     stages = Stage.objects.select_related('stagiaire__user', 'departement', 'maitre_de_stage__user') \
         .order_by('-date_debut')
@@ -249,6 +298,13 @@ def liste_stagiaires(request):
     filtre_statut = request.GET.get('statut', '')
     if filtre_statut in dict(Stage.Statut.choices):
         stages = stages.filter(statut=filtre_statut)
+
+    return stages, recherche, filtre_statut
+
+
+@role_required(User.Role.RH)
+def liste_stagiaires(request):
+    stages, recherche, filtre_statut = _stages_filtres(request)
 
     # Pagination "voir plus" (pas de vraie pagination par pages : on charge
     # juste davantage de lignes à chaque clic, dans la même liste).
@@ -273,6 +329,28 @@ def liste_stagiaires(request):
         return render(request, 'appStage/_resultats_stagiaires.html', context)
 
     return render(request, 'appStage/liste_stagiaires.html', context)
+
+
+@role_required(User.Role.RH)
+def exporter_stagiaires_csv(request):
+    """Export CSV de la liste Stagiaires — respecte la recherche/le filtre de statut en cours."""
+    stages, _, _ = _stages_filtres(request)
+    lignes = [
+        [
+            stage.stagiaire.user.get_full_name(), stage.stagiaire.user.email,
+            stage.intitule_poste, stage.departement.nom,
+            stage.maitre_de_stage.user.get_full_name() if stage.maitre_de_stage else '',
+            stage.get_statut_display(),
+            stage.date_debut.strftime('%d/%m/%Y') if stage.date_debut else '',
+            stage.date_fin.strftime('%d/%m/%Y') if stage.date_fin else '',
+        ]
+        for stage in stages
+    ]
+    return _reponse_csv(
+        'stagiaires.csv',
+        ['Nom complet', 'E-mail', 'Poste', 'Service', 'Maître de stage', 'Statut', 'Date de début', 'Date de fin'],
+        lignes,
+    )
 
 
 @role_required(User.Role.RH)
@@ -344,12 +422,39 @@ def affecter_service(request):
 
 @role_required(User.Role.RH)
 def candidatures(request):
+    # Les candidatures pas encore traitées remontent toujours en premier
+    # (ce sont elles qui demandent une action), les autres suivent par
+    # date de soumission décroissante.
     qs = Candidature.objects.select_related('departement_affecte', 'traite_par__user') \
-        .order_by('-date_soumission')
+        .annotate(
+            deja_traitee=Case(
+                When(statut=Candidature.Statut.EN_ATTENTE, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        ).order_by('deja_traitee', '-date_soumission')
     return render(request, 'appStage/candidatures.html', {
         'candidatures': qs,
         'departements': Departement.objects.all(),
     })
+
+
+@role_required(User.Role.RH)
+def exporter_candidatures_csv(request):
+    candidats = Candidature.objects.select_related('departement_affecte').order_by('-date_soumission')
+    lignes = [
+        [
+            c.nom_complet, c.email, c.telephone, c.filiere, c.get_statut_display(),
+            c.departement_affecte.nom if c.departement_affecte else '',
+            c.date_soumission.strftime('%d/%m/%Y %H:%M') if c.date_soumission else '',
+        ]
+        for c in candidats
+    ]
+    return _reponse_csv(
+        'candidatures.csv',
+        ['Nom complet', 'E-mail', 'Téléphone', 'Filière', 'Statut', 'Service affecté', 'Date de soumission'],
+        lignes,
+    )
 
 
 @require_POST
@@ -459,6 +564,17 @@ def dashboard_tuteur(request):
         if nb:
             presences_a_confirmer.append({'stage': stage, 'nb': nb})
 
+    # Répartition par filière pour le petit graphique en anneau du tableau de bord.
+    compteur_filieres = Counter(
+        (stage.stagiaire.filiere or 'Non renseignée').strip().title() or 'Non renseignée'
+        for stage in stages_encadres
+    )
+    paires_filieres = compteur_filieres.most_common(4)
+    reste = sum(compteur_filieres.values()) - sum(c for _, c in paires_filieres)
+    if reste > 0:
+        paires_filieres.append(('Autres', reste))
+    stats_filieres = _repartition_donut(paires_filieres)
+
     context = {
         'stages_encadres': stages_encadres,
         'rapports_a_valider': rapports_a_valider[:4],
@@ -466,6 +582,7 @@ def dashboard_tuteur(request):
         'presences_a_confirmer': presences_a_confirmer,
         'nb_a_valider': rapports_a_valider.count() + demandes_en_attente.count() + len(presences_a_confirmer),
         'fin_de_periode': fin_de_periode,
+        'stats_filieres': stats_filieres,
     }
     return render(request, 'appStage/dashboard_tuteur.html', context)
 
@@ -602,6 +719,22 @@ def gestion_tuteurs(request):
     return render(request, 'appStage/gestion_tuteurs.html', {'form': form, 'tuteurs': tuteurs})
 
 
+@role_required(User.Role.RH)
+def exporter_tuteurs_csv(request):
+    tuteurs = ProfilMaitreStage.objects.select_related('user') \
+        .annotate(nb_en_cours=Count('stages_encadres', filter=Q(stages_encadres__statut=Stage.Statut.EN_COURS))) \
+        .order_by('user__first_name', 'user__last_name')
+    lignes = [
+        [t.user.get_full_name(), t.user.email, t.poste, t.departement_affiliation, t.nb_en_cours]
+        for t in tuteurs
+    ]
+    return _reponse_csv(
+        'maitres_de_stage.csv',
+        ['Nom complet', 'E-mail', 'Poste', 'Département affiliation', 'Stagiaires en cours'],
+        lignes,
+    )
+
+
 @require_POST
 @role_required(User.Role.RH)
 def supprimer_tuteur(request, tuteur_id):
@@ -630,6 +763,22 @@ def gestion_departements(request):
     ).order_by('nom')
 
     return render(request, 'appStage/gestion_departements.html', {'form': form, 'departements': departements})
+
+
+@role_required(User.Role.RH)
+def exporter_departements_csv(request):
+    departements = Departement.objects.select_related('directeur__user').annotate(
+        nb_stagiaires=Count('stages', filter=Q(stages__statut=Stage.Statut.EN_COURS))
+    ).order_by('nom')
+    lignes = [
+        [d.nom, d.agence, d.directeur.user.get_full_name() if d.directeur else '', d.nb_stagiaires]
+        for d in departements
+    ]
+    return _reponse_csv(
+        'services.csv',
+        ['Nom du service', 'Agence', 'Directeur', 'Stagiaires en cours'],
+        lignes,
+    )
 
 
 @require_POST
@@ -693,6 +842,22 @@ def gestion_directeurs(request):
     )
 
     return render(request, 'appStage/gestion_directeurs.html', {'form': form, 'directeurs': directeurs})
+
+
+@role_required(User.Role.RH)
+def exporter_directeurs_csv(request):
+    directeurs = ProfilDirecteur.objects.select_related('user', 'departement').order_by(
+        'user__first_name', 'user__last_name'
+    )
+    lignes = [
+        [d.user.get_full_name(), d.user.email, d.poste, d.departement.nom if d.departement else '']
+        for d in directeurs
+    ]
+    return _reponse_csv(
+        'directeurs.csv',
+        ['Nom complet', 'E-mail', 'Poste', 'Service dirigé'],
+        lignes,
+    )
 
 
 @require_POST
@@ -1001,6 +1166,12 @@ def dashboard_directeur(request):
         stage__departement=departement, destinataire=DocumentStage.Destinataire.TUTEUR,
     ).select_related('stage__stagiaire__user').order_by('-date_ajout')[:5]
 
+    nb_encadres = stages_service.filter(maitre_de_stage__isnull=False).count()
+    stats_encadrement = _repartition_donut(
+        [('Avec maître de stage', nb_encadres), ('Sans maître de stage', stages_sans_tuteur.count())],
+        palette=['#16a34a', '#f59e0b'],
+    )
+
     context = {
         'departement': departement,
         'stages_service': stages_service,
@@ -1008,6 +1179,7 @@ def dashboard_directeur(request):
         'demandes_en_attente': demandes_en_attente,
         'documents_recents': documents_recents,
         'nb_a_traiter': stages_sans_tuteur.count(),
+        'stats_encadrement': stats_encadrement,
     }
     return render(request, 'appStage/dashboard_directeur.html', context)
 
@@ -1228,7 +1400,9 @@ def marquer_toutes_notifications_lues(request):
 
 @role_required(User.Role.STAGIAIRE, User.Role.RH, User.Role.MAITRE_STAGE, User.Role.DIRECTEUR)
 def parametres(request):
+    onglet_actif = 'profil'
     if request.method == 'POST' and request.POST.get('form_type') == 'securite':
+        onglet_actif = 'securite'
         securite_form = ChangerMotDePasseForm(request.user, request.POST)
         if securite_form.is_valid():
             from django.contrib.auth import update_session_auth_hash
@@ -1248,4 +1422,6 @@ def parametres(request):
         profil_form = ParametresForm(instance=request.user)
         securite_form = ChangerMotDePasseForm(request.user)
 
-    return render(request, 'appStage/parametres.html', {'form': profil_form, 'securite_form': securite_form})
+    return render(request, 'appStage/parametres.html', {
+        'form': profil_form, 'securite_form': securite_form, 'onglet_actif': onglet_actif,
+    })

@@ -26,7 +26,7 @@
         </div>
       {% endif %}
 
-      <form method="post" enctype="multipart/form-data" class="auth-fields">
+      <form method="post" enctype="multipart/form-data" class="auth-fields" id="form-candidature-publique">
         {% csrf_token %}
 
         <div class="form-group">
@@ -99,11 +99,24 @@
           <span>{{ form.avec_soutenance_souhaite.label }}</span>
         </label>
 
-        <button type="submit" class="btn btn-primary btn-block">
+        <button type="submit" class="btn btn-primary btn-block" id="btn-envoyer-candidature">
           Envoyer ma candidature
           <i data-lucide="arrow-right"></i>
         </button>
       </form>
+
+      <script>
+        (function () {
+          var formulaire = document.getElementById('form-candidature-publique');
+          var bouton = document.getElementById('btn-envoyer-candidature');
+          if (!formulaire || !bouton) return;
+          formulaire.addEventListener('submit', function () {
+            bouton.disabled = true;
+            bouton.innerHTML = '<i data-lucide="loader-2"></i> Envoi en cours…';
+            if (window.lucide) window.lucide.createIcons();
+          });
+        })();
+      </script>
 
       <p class="auth-footer">
         Déjà un compte ? <a href="{% url 'appStage:login' %}">Se connecter</a>

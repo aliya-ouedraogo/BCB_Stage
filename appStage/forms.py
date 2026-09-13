@@ -74,6 +74,16 @@ class CandidaturePubliqueForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Documents obligatoires à la candidature (le formulaire ne le
+        # précise pas nativement puisque ces champs sont optionnels côté
+        # modèle — un stagiaire peut très bien ne jamais avoir eu besoin
+        # de déposer de CV après son embauche, par exemple).
+        self.fields['cv'].required = True
+        self.fields['lettre_motivation'].required = True
+        self.fields['piece_identite'].required = True
+
     def clean_telephone(self):
         brut = self.cleaned_data.get('telephone', '')
         chiffres = ''.join(c for c in brut if c.isdigit())

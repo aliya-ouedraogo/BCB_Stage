@@ -7,81 +7,62 @@
 
 {% block dashboard_content %}
 
-  <div class="dash-grid">
+  {% if fin_de_periode %}
+    <div class="panel panel--dark deadline-panel" style="margin-bottom:24px;">
+      <div class="deadline-copy">
+        <h3>Fin de Période</h3>
+        <p>
+          Le stage de {{ fin_de_periode.stagiaire.user.get_full_name }} se termine le
+          {{ fin_de_periode.date_fin|date:"d F Y" }}. Veuillez compléter l'évaluation finale.
+        </p>
+      </div>
+      <a href="{% url 'appStage:evaluer' fin_de_periode.id %}" class="btn btn-primary">
+        Remplir l'Évaluation de Fin de Stage
+        <i data-lucide="arrow-up-right"></i>
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="dash-grid dash-grid--inverse">
     <div class="dash-col">
 
-      <div class="section-head">
-        <h2>Stagiaires Actifs</h2>
-        <a href="{% url 'appStage:mes_stagiaires' %}" class="link-arrow">Voir tout <i data-lucide="arrow-right"></i></a>
-      </div>
-
-      {% if stages_encadres %}
-        <div class="intern-grid">
-          {% for stage in stages_encadres %}
-            <div class="intern-card{% if forloop.counter > 4 %} intern-card--masquee{% endif %}" {% if forloop.counter > 4 %}style="display:none;"{% endif %}>
-              <div class="intern-card-head">
-                <div class="intern-identity">
-                  {% if stage.stagiaire.user.photo %}
-                    <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
-                  {% else %}
-                    <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
-                  {% endif %}
-                  <div class="person-info">
-                    <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
-                    <span class="person-role">{{ stage.stagiaire.get_annee_etude_display }} &bull; {{ stage.stagiaire.filiere }}</span>
-                  </div>
-                </div>
-                {% if stage.statut == 'TERMINE' %}
-                  <span class="badge badge-neutral">Terminé</span>
-                {% elif stage.progression_pourcentage >= 70 %}
-                  <span class="badge badge-success">En cours</span>
+      <!-- Résumé des stagiaires encadrés : une seule carte, quel que soit
+           leur nombre, avec un renvoi vers la liste complète plutôt que
+           d'empiler une carte par stagiaire (ça s'étirait/se tassait mal
+           selon le nombre). -->
+      <div class="panel">
+        <h2 class="panel-title">Stagiaires Actifs</h2>
+        {% if stages_encadres %}
+          <div class="stagiaires-summary">
+            <div class="stagiaires-summary-avatars avatar-stack">
+              {% for stage in stages_encadres|slice:":5" %}
+                {% if stage.stagiaire.user.photo %}
+                  <img class="avatar" src="{{ stage.stagiaire.user.photo.url }}" alt="">
                 {% else %}
-                  <span class="badge badge-warning">Révision</span>
+                  <span class="avatar">{{ stage.stagiaire.user.first_name|first }}{{ stage.stagiaire.user.last_name|first }}</span>
                 {% endif %}
-              </div>
-
-              <div class="progress-row">
-                <span>Progression Globale</span>
-                <strong>{{ stage.progression_pourcentage }}%</strong>
-              </div>
-              <div class="progress-bar" data-progression="{{ stage.progression_pourcentage }}"><span></span></div>
-
-              <div class="intern-actions">
-                <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="btn btn-primary btn-sm">Profil</a>
-                <a href="{% url 'appStage:evaluer' stage.id %}" class="btn btn-outline btn-sm">Évaluer</a>
-              </div>
+              {% endfor %}
+              {% if stages_encadres|length > 5 %}
+                <span class="avatar avatar--more">+{{ stages_encadres|length|add:"-5" }}</span>
+              {% endif %}
             </div>
-          {% endfor %}
-        </div>
-        {% if stages_encadres|length > 4 %}
-          <button type="button" class="btn btn-outline btn-sm" id="btn-voir-plus-stagiaires" style="margin-top:14px;">
-            Voir plus ({{ stages_encadres|length|add:"-4" }} restant{{ stages_encadres|length|add:"-4"|pluralize }})
-          </button>
-        {% endif %}
-      {% else %}
-        <div class="panel">
+            <p class="stagiaires-summary-text">
+              <strong>{{ stages_encadres|length }}</strong> stagiaire{{ stages_encadres|length|pluralize }}
+              actuellement sous votre encadrement.
+            </p>
+            <a href="{% url 'appStage:mes_stagiaires' %}" class="btn btn-primary btn-block">
+              Voir mes stagiaires
+              <i data-lucide="arrow-right"></i>
+            </a>
+          </div>
+        {% else %}
           <p style="color:var(--color-text-muted); font-size:14px;">
             Vous n'encadrez aucun stagiaire actif pour le moment.
           </p>
-        </div>
-      {% endif %}
+        {% endif %}
+      </div>
 
-      {% if fin_de_periode %}
-        <div class="panel panel--dark deadline-panel">
-          <div class="deadline-copy">
-            <h3>Fin de Période</h3>
-            <p>
-              Le stage de {{ fin_de_periode.stagiaire.user.get_full_name }} se termine le
-              {{ fin_de_periode.date_fin|date:"d F Y" }}. Veuillez compléter l'évaluation finale.
-            </p>
-          </div>
-          <a href="{% url 'appStage:evaluer' fin_de_periode.id %}" class="btn btn-primary">
-            Remplir l'Évaluation de Fin de Stage
-            <i data-lucide="arrow-up-right"></i>
-          </a>
-        </div>
-      {% endif %}
-
+      {% include "appStage/_stat_donut.html" with stats=stats_filieres titre="Répartition par filière" sous_titre="Stagiaires" %}
     </div>
 
     <div class="dash-col">
@@ -153,18 +134,5 @@
       </div>
     </div>
   </div>
-
-  <script>
-    (function () {
-      var bouton = document.getElementById('btn-voir-plus-stagiaires');
-      if (!bouton) return;
-      bouton.addEventListener('click', function () {
-        document.querySelectorAll('.intern-card--masquee').forEach(function (carte) {
-          carte.style.display = '';
-        });
-        bouton.style.display = 'none';
-      });
-    })();
-  </script>
 
 {% endblock %}

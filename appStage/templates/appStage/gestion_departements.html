@@ -20,9 +20,14 @@
   <div class="panel">
     <div class="panel-title-row">
       <span class="panel-title">Services</span>
-      <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('form-creer-departement').classList.toggle('open');">
-        <i data-lucide="plus"></i> Créer
-      </button>
+      <div style="display:flex; gap:8px;">
+        <a href="{% url 'appStage:exporter_departements_csv' %}" class="btn btn-outline btn-sm" hx-boost="false">
+          <i data-lucide="download"></i> Exporter
+        </a>
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('form-creer-departement').classList.toggle('open');">
+          <i data-lucide="plus"></i> Créer
+        </button>
+      </div>
     </div>
 
     <div class="form-creer-departement{% if form.errors %} open{% endif %}" id="form-creer-departement">

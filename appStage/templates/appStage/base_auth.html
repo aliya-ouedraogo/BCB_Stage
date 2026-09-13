@@ -24,12 +24,28 @@
     htmx.config.historyCacheSize = 0;
   </script>
 </head>
-<body>
+<body hx-boost="true" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
   {% block content %}{% endblock %}
 
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();
+
+    // Ces pages n'ont pas de sidebar fixe à préserver (contrairement au
+    // tableau de bord) : htmx boost remplace directement tout le <body> à
+    // chaque navigation, d'où le besoin de regénérer les icônes après coup.
+    document.body.addEventListener('htmx:afterSettle', function () {
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    // Même filet de sécurité que sur le tableau de bord : si htmx échoue
+    // (erreur serveur, session, etc.), on retombe sur une navigation classique.
+    document.body.addEventListener('htmx:responseError', function (evenement) {
+      window.location.href = evenement.detail.xhr.responseURL || window.location.href;
+    });
+    document.body.addEventListener('htmx:sendError', function () {
+      window.location.reload();
+    });
   </script>
   {% block extra_js %}{% endblock %}
 </body>

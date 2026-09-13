@@ -16,6 +16,12 @@
 
 {% block dashboard_content %}
 
+  <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+    <a href="{% url 'appStage:exporter_candidatures_csv' %}" class="btn btn-outline btn-sm" hx-boost="false">
+      <i data-lucide="download"></i> Exporter
+    </a>
+  </div>
+
   {% for c in candidatures %}
     <div class="candidature-card">
       <div class="candidature-head">

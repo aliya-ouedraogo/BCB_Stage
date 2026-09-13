@@ -11,11 +11,17 @@
       <input type="search" name="q" id="champ-recherche-stagiaires" value="{{ recherche }}" placeholder="Rechercher un nom, un poste, un département..." autocomplete="off">
       <span id="indicateur-recherche" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11.5px; color:var(--color-text-muted); opacity:0; transition:opacity 0.15s ease; pointer-events:none;">recherche…</span>
     </div>
-    <div class="tab-group">
-      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}" class="tab-item {% if not filtre_statut %}active{% endif %}">Tous</a>
-      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=EN_COURS" class="tab-item {% if filtre_statut == 'EN_COURS' %}active{% endif %}">En cours</a>
-      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=A_VENIR" class="tab-item {% if filtre_statut == 'A_VENIR' %}active{% endif %}">À venir</a>
-      <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=TERMINE" class="tab-item {% if filtre_statut == 'TERMINE' %}active{% endif %}">Terminés</a>
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:12px;">
+      <div class="tab-group">
+        <a href="?{% if recherche %}q={{ recherche }}&{% endif %}" class="tab-item {% if not filtre_statut %}active{% endif %}">Tous</a>
+        <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=EN_COURS" class="tab-item {% if filtre_statut == 'EN_COURS' %}active{% endif %}">En cours</a>
+        <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=A_VENIR" class="tab-item {% if filtre_statut == 'A_VENIR' %}active{% endif %}">À venir</a>
+        <a href="?{% if recherche %}q={{ recherche }}&{% endif %}statut=TERMINE" class="tab-item {% if filtre_statut == 'TERMINE' %}active{% endif %}">Terminés</a>
+      </div>
+      <a href="{% url 'appStage:exporter_stagiaires_csv' %}?{% if recherche %}q={{ recherche }}&{% endif %}{% if filtre_statut %}statut={{ filtre_statut }}{% endif %}"
+         class="btn btn-outline btn-sm" hx-boost="false">
+        <i data-lucide="download"></i> Exporter
+      </a>
     </div>
   </form>
 
