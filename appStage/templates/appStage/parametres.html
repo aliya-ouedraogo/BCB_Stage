@@ -25,7 +25,7 @@
             <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
           {% endif %}
 
-          <form method="post" enctype="multipart/form-data" class="auth-fields">
+          <form method="post" enctype="multipart/form-data" class="auth-fields form-avec-chargement">
             {% csrf_token %}
             <input type="hidden" name="form_type" value="profil">
 
@@ -84,7 +84,7 @@
 
             <div style="display:flex; gap:10px; margin-top:8px;">
               <a href="{% url user.get_dashboard_url_name %}" class="btn btn-outline">Annuler</a>
-              <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+              <button type="submit" class="btn btn-primary" data-loading-text="Enregistrement…">Enregistrer les modifications</button>
             </div>
           </form>
         </div>
@@ -100,7 +100,7 @@
             <div class="form-errors">{% for e in securite_form.non_field_errors %}{{ e }}{% endfor %}</div>
           {% endif %}
 
-          <form method="post" class="auth-fields">
+          <form method="post" class="auth-fields form-avec-chargement">
             {% csrf_token %}
             <input type="hidden" name="form_type" value="securite">
 
@@ -120,7 +120,7 @@
               {% for e in securite_form.new_password2.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
             </div>
 
-            <button type="submit" class="btn btn-primary" style="margin-top:8px;">Mettre à jour le mot de passe</button>
+            <button type="submit" class="btn btn-primary" style="margin-top:8px;" data-loading-text="Mise à jour…">Mettre à jour le mot de passe</button>
           </form>
         </div>
       </div>

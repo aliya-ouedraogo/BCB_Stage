@@ -2,19 +2,6 @@
 
 {% block title %}Directeurs - BCBStageFlow{% endblock %}
 
-{% block page_css %}
-<style>
-  .form-creer-directeur {
-    display: none;
-    margin: 20px 0;
-    padding: 18px;
-    background: var(--color-bg);
-    border-radius: var(--radius-md);
-  }
-  .form-creer-directeur.open { display: block; }
-</style>
-{% endblock %}
-
 {% block dashboard_content %}
 
   <div class="panel">
@@ -31,7 +18,7 @@
     </div>
 
     <div class="form-creer-directeur{% if form.errors %} open{% endif %}" id="form-creer-directeur">
-      <form method="post" id="form-creer-directeur-envoi" style="display:flex; flex-direction:column; gap:14px;">
+      <form method="post" id="form-creer-directeur-envoi" class="form-avec-chargement" style="display:flex; flex-direction:column; gap:14px;">
         {% csrf_token %}
         {% if form.non_field_errors %}
           <div class="app-message app-message--error">
@@ -64,7 +51,7 @@
         </div>
         <span class="form-hint">Un e-mail lui sera envoyé pour qu'il définisse lui-même son mot de passe. Seuls les départements sans directeur apparaissent dans la liste.</span>
         <div style="display:flex; gap:10px;">
-          <button type="submit" class="btn btn-primary" id="btn-creer-directeur">
+          <button type="submit" class="btn btn-primary" id="btn-creer-directeur" data-loading-text="Création…">
             <i data-lucide="send"></i> Créer et inviter
           </button>
           <button type="button" class="btn btn-outline" onclick="document.getElementById('form-creer-directeur').classList.remove('open');">Annuler</button>

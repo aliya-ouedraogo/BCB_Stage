@@ -53,51 +53,53 @@
           <p style="color:var(--color-text-muted); font-size:14px;">Aucun stagiaire actif dans votre service pour le moment.</p>
         {% endfor %}
       </div>
+
+      <div class="dash-subgrid">
+        <div class="panel">
+          <div class="panel-title-row">
+            <span class="panel-title">Propositions en attente de réponse</span>
+          </div>
+          {% for demande in demandes_en_attente %}
+            <div class="todo-item">
+              <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
+                <i data-lucide="clock"></i>
+              </span>
+              <div class="todo-content" style="flex:1;">
+                <div class="todo-title">{{ demande.stage.stagiaire.user.get_full_name }}</div>
+                <div class="todo-desc">Proposé à {{ demande.maitre_de_stage_demande.user.get_full_name }}, en attente de sa réponse</div>
+              </div>
+            </div>
+          {% empty %}
+            <p style="color:var(--color-text-muted); font-size:14px;">Aucune proposition en attente.</p>
+          {% endfor %}
+        </div>
+
+        <div class="panel">
+          <div class="panel-title-row">
+            <span class="panel-title">Documents récents</span>
+            <a href="{% url 'appStage:documents_recus_directeur' %}" class="list-cta" style="text-decoration:none;">Tout voir</a>
+          </div>
+          {% for doc in documents_recents %}
+            <div class="doc-row">
+              <span class="doc-icon doc-icon--doc"><i data-lucide="file"></i></span>
+              <div class="doc-info" style="flex:1;">
+                <div class="doc-name">{{ doc.nom }}</div>
+                <div class="doc-meta">{{ doc.stage.stagiaire.user.get_full_name }} &bull; {{ doc.date_ajout|timesince }}</div>
+              </div>
+              {% if doc.fichier %}
+                <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i></a>
+              {% endif %}
+            </div>
+          {% empty %}
+            <p style="color:var(--color-text-muted); font-size:14px;">Aucun document déposé pour le moment.</p>
+          {% endfor %}
+        </div>
+      </div>
     </div>
 
     <div class="dash-col">
       <div>
         {% include "appStage/_stat_donut.html" with stats=stats_encadrement titre="Encadrement du service" sous_titre="Stagiaires" %}
-      </div>
-
-      <div class="panel">
-        <div class="panel-title-row">
-          <span class="panel-title">Propositions en attente de réponse</span>
-        </div>
-        {% for demande in demandes_en_attente %}
-          <div class="todo-item">
-            <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
-              <i data-lucide="clock"></i>
-            </span>
-            <div class="todo-content" style="flex:1;">
-              <div class="todo-title">{{ demande.stage.stagiaire.user.get_full_name }}</div>
-              <div class="todo-desc">Proposé à {{ demande.maitre_de_stage_demande.user.get_full_name }}, en attente de sa réponse</div>
-            </div>
-          </div>
-        {% empty %}
-          <p style="color:var(--color-text-muted); font-size:14px;">Aucune proposition en attente.</p>
-        {% endfor %}
-      </div>
-
-      <div class="panel">
-        <div class="panel-title-row">
-          <span class="panel-title">Documents récents</span>
-          <a href="{% url 'appStage:documents_recus_directeur' %}" class="list-cta" style="text-decoration:none;">Tout voir</a>
-        </div>
-        {% for doc in documents_recents %}
-          <div class="doc-row">
-            <span class="doc-icon doc-icon--doc"><i data-lucide="file"></i></span>
-            <div class="doc-info" style="flex:1;">
-              <div class="doc-name">{{ doc.nom }}</div>
-              <div class="doc-meta">{{ doc.stage.stagiaire.user.get_full_name }} &bull; {{ doc.date_ajout|timesince }}</div>
-            </div>
-            {% if doc.fichier %}
-              <a href="{{ doc.fichier.url }}" class="btn btn-outline btn-sm" download><i data-lucide="download"></i></a>
-            {% endif %}
-          </div>
-        {% empty %}
-          <p style="color:var(--color-text-muted); font-size:14px;">Aucun document déposé pour le moment.</p>
-        {% endfor %}
       </div>
     </div>
   </div>

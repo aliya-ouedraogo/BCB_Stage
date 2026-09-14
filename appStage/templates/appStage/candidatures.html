@@ -2,18 +2,6 @@
 
 {% block title %}Candidatures - BCBStageFlow{% endblock %}
 
-{% block page_css %}
-<style>
-  .candidature-accept-panel, .candidature-refuse-panel { display: none; }
-  .candidature-accept-panel.open, .candidature-refuse-panel.open {
-  display: block;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--color-border);
-}
-</style>
-{% endblock %}
-
 {% block dashboard_content %}
 
   <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
@@ -40,24 +28,6 @@
             </div>
 
             <div style="display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-              {% if c.cv %}
-                <a href="{{ c.cv.url }}" target="_blank" class="doc-chip">
-                  <i data-lucide="file-text"></i> CV
-                </a>
-              {% endif %}
-              {% if c.lettre_motivation %}
-                <a href="{{ c.lettre_motivation.url }}" target="_blank" class="doc-chip">
-                  <i data-lucide="file"></i> Lettre de motivation
-                </a>
-              {% endif %}
-              {% if c.piece_identite %}
-                <a href="{{ c.piece_identite.url }}" target="_blank" class="doc-chip">
-                  <i data-lucide="badge-check"></i> CNIB
-                </a>
-              {% endif %}
-              {% if not c.cv and not c.lettre_motivation and not c.piece_identite %}
-                <span class="doc-chip-empty">Aucun document joint</span>
-              {% endif %}
               <span class="chip">
                 <i data-lucide="{% if c.avec_soutenance_souhaite %}flag{% else %}minus-circle{% endif %}" style="width:12px;height:12px;"></i>
                 {% if c.avec_soutenance_souhaite %}Souhaite une soutenance{% else %}Sans soutenance{% endif %}
@@ -68,6 +38,47 @@
                   Souhaite : {{ c.departement_souhaite.nom }}
                 </span>
               {% endif %}
+            </div>
+
+            <div class="candidature-docs">
+              <div class="candidature-docs-title">
+                <i data-lucide="folder-open"></i> Documents du candidat — à consulter avant de statuer
+              </div>
+              <div class="candidature-docs-grid">
+                {% if c.cv %}
+                  <a href="{{ c.cv.url }}" target="_blank" class="doc-card">
+                    <span class="doc-card-icon"><i data-lucide="file-text"></i></span>
+                    <span class="doc-card-text"><strong>CV</strong><span>Ouvrir <i data-lucide="external-link"></i></span></span>
+                  </a>
+                {% else %}
+                  <span class="doc-card doc-card--missing">
+                    <span class="doc-card-icon"><i data-lucide="file-x"></i></span>
+                    <span class="doc-card-text"><strong>CV</strong><span>Non fourni</span></span>
+                  </span>
+                {% endif %}
+                {% if c.lettre_motivation %}
+                  <a href="{{ c.lettre_motivation.url }}" target="_blank" class="doc-card">
+                    <span class="doc-card-icon"><i data-lucide="file"></i></span>
+                    <span class="doc-card-text"><strong>Lettre de motivation</strong><span>Ouvrir <i data-lucide="external-link"></i></span></span>
+                  </a>
+                {% else %}
+                  <span class="doc-card doc-card--missing">
+                    <span class="doc-card-icon"><i data-lucide="file-x"></i></span>
+                    <span class="doc-card-text"><strong>Lettre de motivation</strong><span>Non fournie</span></span>
+                  </span>
+                {% endif %}
+                {% if c.piece_identite %}
+                  <a href="{{ c.piece_identite.url }}" target="_blank" class="doc-card">
+                    <span class="doc-card-icon"><i data-lucide="badge-check"></i></span>
+                    <span class="doc-card-text"><strong>CNIB</strong><span>Ouvrir <i data-lucide="external-link"></i></span></span>
+                  </a>
+                {% else %}
+                  <span class="doc-card doc-card--missing">
+                    <span class="doc-card-icon"><i data-lucide="file-x"></i></span>
+                    <span class="doc-card-text"><strong>CNIB</strong><span>Non fournie</span></span>
+                  </span>
+                {% endif %}
+              </div>
             </div>
           </div>
         </div>
@@ -112,18 +123,13 @@
 
       {% if c.statut == 'EN_ATTENTE' %}
         <div class="candidature-accept-panel" id="accept-{{ c.id }}">
-          <form method="post" action="{% url 'appStage:accepter_candidature' c.id %}">
+          <form method="post" action="{% url 'appStage:accepter_candidature' c.id %}" class="form-avec-chargement">
             {% csrf_token %}
+            <p style="font-size:12.5px; color:var(--color-text-muted); margin:0;">
+              Le service ne se choisit pas ici : une fois le compte créé, affectez-le depuis
+              la page <strong>Affectation</strong>.
+            </p>
             <div class="candidature-form-row">
-              <div class="form-group">
-                <label>Département</label>
-                <select name="departement" required>
-                  <option value="">Choisir…</option>
-                  {% for d in departements %}
-                    <option value="{{ d.id }}" {% if c.departement_souhaite_id == d.id %}selected{% endif %}>{{ d.nom }}</option>
-                  {% endfor %}
-                </select>
-              </div>
               <div class="form-group">
                 <label>Date de début</label>
                 <input type="date" name="date_debut" required>
@@ -132,7 +138,7 @@
                 <label>Date de fin</label>
                 <input type="date" name="date_fin" required>
               </div>
-              <button type="submit" class="btn btn-primary btn-sm">Confirmer</button>
+              <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Confirmation…">Confirmer</button>
             </div>
             <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:var(--color-text-muted);">
               <input type="checkbox" name="avec_soutenance" {% if c.avec_soutenance_souhaite %}checked{% endif %}> Stage avec soutenance / rapports / tuteur
@@ -142,13 +148,13 @@
         </div>
 
         <div class="candidature-refuse-panel" id="refuse-{{ c.id }}">
-          <form method="post" action="{% url 'appStage:refuser_candidature' c.id %}" style="margin-top:14px;">
+          <form method="post" action="{% url 'appStage:refuser_candidature' c.id %}" style="margin-top:14px;" class="form-avec-chargement">
             {% csrf_token %}
             <div class="form-group">
               <label>Motif du refus</label>
               <textarea name="motif" rows="2" required placeholder="Obligatoire : sera visible par le candidat."></textarea>
             </div>
-            <button type="submit" class="btn btn-outline btn-sm" style="margin-top:8px;">Confirmer le refus</button>
+            <button type="submit" class="btn btn-outline btn-sm" style="margin-top:8px;" data-loading-text="Envoi…">Confirmer le refus</button>
           </form>
         </div>
       {% endif %}

@@ -2,21 +2,6 @@
 
 {% block title %}Documents - BCBStageFlow{% endblock %}
 
-{% block page_css %}
-<style>
-  .doc-accordion summary { position: relative; }
-  .doc-accordion summary::-webkit-details-marker { display: none; }
-  .doc-accordion summary::marker { content: ""; }
-  .doc-accordion .count-badge {
-    min-width: 24px; height: 24px; border-radius: 50%;
-    background: var(--color-primary); color: #fff; font-size: 12px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; padding: 0 6px;
-  }
-  .doc-accordion .doc-accordion-toggle [data-lucide] { width: 14px; height: 14px; transition: transform 0.15s ease; }
-  .doc-accordion[open] .doc-accordion-toggle [data-lucide] { transform: rotate(180deg); }
-</style>
-{% endblock %}
-
 {% block dashboard_content %}
 
   {% if departement %}

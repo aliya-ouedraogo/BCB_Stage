@@ -150,3 +150,50 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+/* ---------------------------------------------------------
+   Indicateurs de chargement génériques (boutons + navigation htmx)
+   --------------------------------------------------------- */
+
+/* Petit spinner à insérer dans un bouton pendant une action en cours. */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+  vertical-align: -2px;
+}
+.btn-outline .btn-spinner,
+.btn-secondary .btn-spinner {
+  border-color: var(--color-border);
+  border-top-color: var(--color-text-muted);
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+.btn[disabled],
+.btn.is-loading {
+  opacity: 0.75;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Petit spinner utilisable comme hx-indicator sur un lien discret
+   (ex. boutons "Se connecter" / "Déposer une candidature" en page
+   d'accueil, dont la navigation est boostée par htmx). Combiné à la
+   classe htmx-indicator, il est affiché/masqué automatiquement par htmx
+   pendant la requête déclenchée par le lien qui le contient. */
+.link-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+.btn-secondary .link-spinner { border-color: var(--color-border); border-top-color: var(--color-text-muted); }

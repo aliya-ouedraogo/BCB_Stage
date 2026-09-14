@@ -9,7 +9,7 @@
       <span class="panel-title">Stagiaires en attente d'un maître de stage ({{ stages_en_attente|length }})</span>
     </div>
     {% for stage in stages_en_attente %}
-      <form method="post" class="person-row">
+      <form method="post" class="person-row form-avec-chargement">
         {% csrf_token %}
         <input type="hidden" name="stage_id" value="{{ stage.id }}">
         {% if stage.stagiaire.user.photo %}
@@ -27,7 +27,7 @@
             <option value="{{ tuteur.id }}">{{ tuteur.user.get_full_name }}{% if tuteur.poste %} &bull; {{ tuteur.poste }}{% endif %}</option>
           {% endfor %}
         </select>
-        <button type="submit" class="btn btn-primary btn-sm">Proposer</button>
+        <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Envoi…">Proposer</button>
       </form>
     {% empty %}
       <p style="color:var(--color-text-muted); font-size:14px;">Tous les stagiaires de votre service ont un maître de stage, ou une proposition est déjà en cours.</p>

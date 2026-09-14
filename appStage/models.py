@@ -358,12 +358,13 @@ class Candidature(models.Model):
         self.save()
         self._envoyer_email_refus()
 
-    def accepter(self, departement, traite_par, date_debut, date_fin, avec_soutenance=True):
+    def accepter(self, traite_par, date_debut, date_fin, avec_soutenance=True):
         """
         Accepte la candidature : crée le compte utilisateur (sans mot de
-        passe utilisable), son profil, le Stage correspondant, puis envoie
-        un email avec un lien d'activation à usage unique permettant au
-        stagiaire de définir lui-même son mot de passe.
+        passe utilisable), son profil, le Stage correspondant (sans service
+        assigné pour l'instant — cela se fait ensuite sur la page
+        Affectation), puis envoie un email avec un lien d'activation à usage
+        unique permettant au stagiaire de définir lui-même son mot de passe.
         """
         parties_nom = self.nom_complet.strip().split(' ', 1)
         user = User.objects.create_user(
@@ -382,7 +383,7 @@ class Candidature(models.Model):
 
         stage = Stage.objects.create(
             stagiaire=profil,
-            departement=departement,
+            departement=None,
             intitule_poste=self.poste_souhaite,
             date_debut=date_debut,
             date_fin=date_fin,
@@ -391,14 +392,12 @@ class Candidature(models.Model):
         )
 
         self.statut = self.Statut.ACCEPTEE
-        self.departement_affecte = departement
         self.traite_par = traite_par
         self.stagiaire_cree = profil
         self.date_traitement = timezone.now()
         self.save()
 
         lien_activation = self._envoyer_email_activation(user)
-        stage.notifier_directeur_affectation()
 
         return user, stage, lien_activation
 
@@ -507,7 +506,10 @@ class Stage(models.Model):
         ProfilStagiaire, on_delete=models.CASCADE, related_name='stages'
     )
     departement = models.ForeignKey(
-        Departement, on_delete=models.PROTECT, related_name='stages'
+        Departement, on_delete=models.PROTECT, related_name='stages',
+        null=True, blank=True,
+        help_text="Laissé vide tant que le stagiaire n'a pas encore été affecté à un service "
+                   "(voir la page Affectation).",
     )
     maitre_de_stage = models.ForeignKey(
         ProfilMaitreStage, on_delete=models.SET_NULL, null=True, blank=True,
@@ -616,18 +618,39 @@ class Stage(models.Model):
 
     def notifier_directeur_affectation(self):
         """
-        Prévient par email (et via une Notification in-app) le directeur du
-        département auquel ce stagiaire vient d'être affecté par le RH, pour
-        qu'il choisisse à son tour un maître de stage. N'empêche jamais
-        l'affectation elle-même si l'envoi échoue (fail_silently).
+        Prévient par email (et via une Notification in-app) le stagiaire et
+        le directeur du département auquel il vient d'être affecté par le
+        RH — le stagiaire pour information, le directeur pour qu'il choisisse
+        à son tour un maître de stage. N'empêche jamais l'affectation
+        elle-même si l'un des envois échoue (fail_silently).
         """
-        directeur = getattr(self.departement, 'directeur', None)
-        if not directeur or not directeur.user_id:
-            return
-
         from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
+
+        stagiaire_user = self.stagiaire.user
+        if stagiaire_user.email:
+            Notification.creer(
+                destinataire=stagiaire_user,
+                message=f"Vous avez été affecté(e) au service {self.departement.nom}.",
+            )
+            send_mail(
+                subject="Affectation à un service - BCBStageFlow",
+                message=(
+                    f"Bonjour {stagiaire_user.get_full_name()},\n\n"
+                    f"Vous venez d'être affecté(e) au service {self.departement.nom} "
+                    f"pour votre stage de {self.intitule_poste}.\n\n"
+                    f"Un maître de stage vous sera bientôt attribué.\n\n"
+                    f"L'équipe BCBStageFlow"
+                ),
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[stagiaire_user.email],
+                fail_silently=True,
+            )
+
+        directeur = getattr(self.departement, 'directeur', None)
+        if not directeur or not directeur.user_id:
+            return
 
         Notification.creer(
             destinataire=directeur.user,
@@ -698,6 +721,10 @@ class DemandeEncadrement(models.Model):
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
     date_demande = models.DateTimeField(auto_now_add=True)
     date_reponse = models.DateTimeField(null=True, blank=True)
+    motif_refus = models.TextField(
+        blank=True,
+        help_text="Renseigné par le maître de stage en cas de refus ; visible uniquement par le directeur.",
+    )
 
     class Meta:
         ordering = ['-date_demande']
@@ -715,9 +742,9 @@ class DemandeEncadrement(models.Model):
         Notification.creer(
             destinataire=tuteur_user,
             message=f"On vous propose d'encadrer {self.stage.stagiaire.user.get_full_name()}.",
-            lien=reverse('appStage:dashboard_tuteur'),
+            lien=reverse('appStage:mes_affectations'),
         )
-        lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:dashboard_tuteur')}"
+        lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:mes_affectations')}"
         send_mail(
             subject="Proposition d'encadrement - BCBStageFlow",
             message=(
@@ -740,16 +767,24 @@ class DemandeEncadrement(models.Model):
         self.stage.save(update_fields=['maitre_de_stage'])
         self._notifier_reponse(acceptee=True)
 
-    def refuser(self):
+    def refuser(self, motif=''):
         self.statut = self.Statut.REFUSEE
         self.date_reponse = timezone.now()
+        self.motif_refus = motif
         self.save()
         self._notifier_reponse(acceptee=False)
 
     def _notifier_reponse(self, acceptee):
-        """Prévient le stagiaire et le directeur de la décision du tuteur."""
+        """
+        En cas d'acceptation, prévient le stagiaire (nouveau maître de
+        stage) et le directeur. En cas de refus, seul le directeur est
+        informé (avec le motif) : le stagiaire n'a pas à savoir qu'un
+        tuteur en particulier a décliné, et attend simplement une nouvelle
+        proposition.
+        """
         from django.core.mail import send_mail
         from django.conf import settings as dj_settings
+        from django.urls import reverse
 
         tuteur_nom = self.maitre_de_stage_demande.user.get_full_name()
         stagiaire_user = self.stage.stagiaire.user
@@ -758,32 +793,42 @@ class DemandeEncadrement(models.Model):
         if acceptee:
             message_stagiaire = f"{tuteur_nom} est désormais votre maître de stage."
             message_directeur = f"{tuteur_nom} a accepté d'encadrer {stagiaire_user.get_full_name()}."
+
+            Notification.creer(destinataire=stagiaire_user, message=message_stagiaire)
+            if stagiaire_user.email:
+                send_mail(
+                    subject="Votre encadrement de stage - BCBStageFlow",
+                    message=f"Bonjour {stagiaire_user.get_full_name()},\n\n{message_stagiaire}\n\nL'équipe BCBStageFlow",
+                    from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[stagiaire_user.email],
+                    fail_silently=True,
+                )
         else:
-            message_stagiaire = f"{tuteur_nom} n'a pas pu accepter de vous encadrer. Votre directeur va vous proposer un autre tuteur."
-            message_directeur = f"{tuteur_nom} a refusé d'encadrer {stagiaire_user.get_full_name()} : choisissez un autre tuteur."
+            message_directeur = (
+                f"{tuteur_nom} a refusé d'encadrer {stagiaire_user.get_full_name()} : "
+                f"choisissez un autre tuteur."
+            )
+            if self.motif_refus:
+                message_directeur += f" Motif : {self.motif_refus}"
 
-        from django.urls import reverse
-
-        Notification.creer(destinataire=stagiaire_user, message=message_stagiaire)
         if directeur and directeur.user_id:
             Notification.creer(
                 destinataire=directeur.user, message=message_directeur,
                 lien=reverse('appStage:affecter_maitre_stage'),
             )
+            corps_email = f"Bonjour {directeur.user.get_full_name()},\n\n{message_directeur}"
+            if not acceptee and self.motif_refus:
+                corps_email = (
+                    f"Bonjour {directeur.user.get_full_name()},\n\n"
+                    f"{tuteur_nom} a refusé d'encadrer {stagiaire_user.get_full_name()}.\n\n"
+                    f"Motif indiqué :\n{self.motif_refus}\n\n"
+                    f"Merci de lui choisir un autre maître de stage."
+                )
             send_mail(
                 subject="Réponse à une proposition d'encadrement - BCBStageFlow",
-                message=f"Bonjour {directeur.user.get_full_name()},\n\n{message_directeur}\n\nL'équipe BCBStageFlow",
+                message=f"{corps_email}\n\nL'équipe BCBStageFlow",
                 from_email=dj_settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[directeur.user.email],
-                fail_silently=True,
-            )
-
-        if stagiaire_user.email:
-            send_mail(
-                subject="Votre encadrement de stage - BCBStageFlow",
-                message=f"Bonjour {stagiaire_user.get_full_name()},\n\n{message_stagiaire}\n\nL'équipe BCBStageFlow",
-                from_email=dj_settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[stagiaire_user.email],
                 fail_silently=True,
             )
 

@@ -213,6 +213,11 @@
   font-weight: 600;
 }
 
+.required-mark {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
 .form-errors {
   background: var(--color-danger-bg);
   color: var(--color-danger);

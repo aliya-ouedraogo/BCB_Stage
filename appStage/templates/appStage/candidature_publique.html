@@ -26,7 +26,7 @@
         </div>
       {% endif %}
 
-      <form method="post" enctype="multipart/form-data" class="auth-fields" id="form-candidature-publique">
+      <form method="post" enctype="multipart/form-data" class="auth-fields form-avec-chargement" id="form-candidature-publique">
         {% csrf_token %}
 
         <div class="form-group">
@@ -51,17 +51,10 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="{{ form.poste_souhaite.id_for_label }}">{{ form.poste_souhaite.label }}</label>
-            {{ form.poste_souhaite }}
-            {% for error in form.poste_souhaite.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
-          </div>
-          <div class="form-group">
-            <label for="{{ form.departement_souhaite.id_for_label }}">{{ form.departement_souhaite.label }}</label>
-            {{ form.departement_souhaite }}
-            <span class="form-hint">Facultatif : le RH pourra ajuster votre affectation finale.</span>
-          </div>
+        <div class="form-group">
+          <label for="{{ form.poste_souhaite.id_for_label }}">{{ form.poste_souhaite.label }}</label>
+          {{ form.poste_souhaite }}
+          {% for error in form.poste_souhaite.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
         </div>
 
         <div class="form-row">
@@ -72,26 +65,28 @@
           <div class="form-group">
             <label for="{{ form.annee_etude.id_for_label }}">{{ form.annee_etude.label }}</label>
             {{ form.annee_etude }}
-            <span class="form-hint">Votre année d'étude actuelle, pas l'année de la candidature.</span>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="{{ form.cv.id_for_label }}">{{ form.cv.label }}</label>
+            <label for="{{ form.cv.id_for_label }}">{{ form.cv.label }} <span class="required-mark">*</span></label>
             {{ form.cv }}
             <span class="form-hint">Format PDF de préférence.</span>
+            {% for error in form.cv.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
           </div>
           <div class="form-group">
-            <label for="{{ form.lettre_motivation.id_for_label }}">{{ form.lettre_motivation.label }}</label>
+            <label for="{{ form.lettre_motivation.id_for_label }}">{{ form.lettre_motivation.label }} <span class="required-mark">*</span></label>
             {{ form.lettre_motivation }}
+            {% for error in form.lettre_motivation.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
           </div>
         </div>
 
         <div class="form-group">
-          <label for="{{ form.piece_identite.id_for_label }}">{{ form.piece_identite.label }}</label>
+          <label for="{{ form.piece_identite.id_for_label }}">{{ form.piece_identite.label }} <span class="required-mark">*</span></label>
           {{ form.piece_identite }}
           <span class="form-hint">CNIB, passeport ou équivalent.</span>
+          {% for error in form.piece_identite.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
         </div>
 
         <label style="display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:var(--color-text-muted); cursor:pointer;">
@@ -99,24 +94,11 @@
           <span>{{ form.avec_soutenance_souhaite.label }}</span>
         </label>
 
-        <button type="submit" class="btn btn-primary btn-block" id="btn-envoyer-candidature">
+        <button type="submit" class="btn btn-primary btn-block" id="btn-envoyer-candidature" data-loading-text="Envoi en cours…">
           Envoyer ma candidature
           <i data-lucide="arrow-right"></i>
         </button>
       </form>
-
-      <script>
-        (function () {
-          var formulaire = document.getElementById('form-candidature-publique');
-          var bouton = document.getElementById('btn-envoyer-candidature');
-          if (!formulaire || !bouton) return;
-          formulaire.addEventListener('submit', function () {
-            bouton.disabled = true;
-            bouton.innerHTML = '<i data-lucide="loader-2"></i> Envoi en cours…';
-            if (window.lucide) window.lucide.createIcons();
-          });
-        })();
-      </script>
 
       <p class="auth-footer">
         Déjà un compte ? <a href="{% url 'appStage:login' %}">Se connecter</a>

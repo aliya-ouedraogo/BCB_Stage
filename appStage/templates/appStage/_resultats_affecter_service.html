@@ -10,7 +10,11 @@
     <div class="person-info">
       <span class="person-name" style="display:flex; align-items:center; gap:8px;">
         {{ stage.stagiaire.user.get_full_name }}
-        {% if stage.statut == 'EN_COURS' %}
+        {% if not stage.departement_id %}
+          <span class="badge badge-warning" title="Ce stagiaire n'a pas encore de service">
+            <i data-lucide="alert-circle" style="width:12px;height:12px;"></i> À affecter
+          </span>
+        {% elif stage.statut == 'EN_COURS' %}
           <span class="badge badge-success">En cours</span>
         {% elif stage.statut == 'TERMINE' %}
           <span class="badge badge-neutral">Terminé</span>
@@ -23,7 +27,10 @@
         {% if stage.maitre_de_stage %} &bull; {{ stage.maitre_de_stage.user.get_full_name }}{% endif %}
       </span>
     </div>
-    <select name="departement" class="form-select champ-departement" data-initial="{{ stage.departement_id }}" required style="max-width:220px;">
+    <select name="departement" class="form-select champ-departement" data-initial="{{ stage.departement_id|default:'' }}" required style="max-width:220px;">
+      {% if not stage.departement_id %}
+        <option value="" selected disabled>Choisir un service…</option>
+      {% endif %}
       {% for dep in departements %}
         <option value="{{ dep.id }}" {% if dep.id == stage.departement_id %}selected{% endif %}>{{ dep.nom }}</option>
       {% endfor %}

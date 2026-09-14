@@ -338,7 +338,7 @@ def exporter_stagiaires_csv(request):
     lignes = [
         [
             stage.stagiaire.user.get_full_name(), stage.stagiaire.user.email,
-            stage.intitule_poste, stage.departement.nom,
+            stage.intitule_poste, stage.departement.nom if stage.departement else 'Non affecté',
             stage.maitre_de_stage.user.get_full_name() if stage.maitre_de_stage else '',
             stage.get_statut_display(),
             stage.date_debut.strftime('%d/%m/%Y') if stage.date_debut else '',
@@ -356,16 +356,24 @@ def exporter_stagiaires_csv(request):
 @role_required(User.Role.RH)
 def affecter_service(request):
     """
-    Page dédiée à l'affectation (et à la réaffectation) des stagiaires à un
-    service. La première affectation se fait normalement à l'acceptation de
-    la candidature, mais cette page permet de corriger/changer le service
-    d'un stagiaire déjà en poste — ce qui redémarre le processus
-    d'encadrement : le maître de stage éventuel est désassigné et le
-    nouveau directeur de service est notifié pour en choisir un.
+    Page dédiée à l'affectation des stagiaires à un service. Depuis
+    l'acceptation d'une candidature, le stage est créé sans service : c'est
+    ici, et uniquement ici, que le RH lui en choisit un (première
+    affectation) ou en change (réaffectation) — ce qui redémarre le
+    processus d'encadrement : le maître de stage éventuel est désassigné et
+    le nouveau directeur de service est notifié pour en choisir un.
     """
     Stage.synchroniser_statuts()
     stages = Stage.objects.select_related('stagiaire__user', 'departement', 'maitre_de_stage__user') \
-        .exclude(statut=Stage.Statut.RESILIE).order_by('-date_debut')
+        .exclude(statut=Stage.Statut.RESILIE) \
+        .annotate(
+            _a_affecter=Case(
+                When(departement__isnull=True, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        ) \
+        .order_by('_a_affecter', '-date_debut')
 
     recherche = request.GET.get('q', '').strip()
     if recherche:
@@ -380,7 +388,8 @@ def affecter_service(request):
         if form.is_valid():
             stage = get_object_or_404(Stage.objects.select_related('departement', 'stagiaire__user'), pk=form.cleaned_data['stage_id'])
             nouveau_departement = form.cleaned_data['departement']
-            if nouveau_departement.id == stage.departement_id:
+            premiere_affectation = stage.departement_id is None
+            if not premiere_affectation and nouveau_departement.id == stage.departement_id:
                 messages.info(request, f"{stage.stagiaire.user.get_full_name()} est déjà affecté(e) à ce service.")
             else:
                 ancien_maitre_de_stage = stage.maitre_de_stage
@@ -390,10 +399,19 @@ def affecter_service(request):
                 stage.demandes_encadrement.filter(statut=DemandeEncadrement.Statut.EN_ATTENTE).update(
                     statut=DemandeEncadrement.Statut.REFUSEE, date_reponse=timezone.now(),
                 )
+                # Garde la candidature d'origine (utilisée en export CSV / admin)
+                # synchronisée avec le service réellement attribué.
+                candidature_origine = getattr(stage.stagiaire, 'candidature_origine', None)
+                if candidature_origine:
+                    candidature_origine.departement_affecte = nouveau_departement
+                    candidature_origine.save(update_fields=['departement_affecte'])
                 stage.notifier_directeur_affectation()
-                message = f"{stage.stagiaire.user.get_full_name()} affecté(e) au service {nouveau_departement.nom}."
-                if ancien_maitre_de_stage:
-                    message += " Son ancien maître de stage a été désassigné : le nouveau directeur doit en choisir un autre."
+                if premiere_affectation:
+                    message = f"{stage.stagiaire.user.get_full_name()} affecté(e) au service {nouveau_departement.nom}."
+                else:
+                    message = f"{stage.stagiaire.user.get_full_name()} affecté(e) au service {nouveau_departement.nom}."
+                    if ancien_maitre_de_stage:
+                        message += " Son ancien maître de stage a été désassigné : le nouveau directeur doit en choisir un autre."
                 messages.success(request, message)
             return redirect(f"{reverse('appStage:affecter_service')}?maj={stage.id}")
         messages.error(request, "Formulaire invalide, réessayez.")
@@ -435,7 +453,6 @@ def candidatures(request):
         ).order_by('deja_traitee', '-date_soumission')
     return render(request, 'appStage/candidatures.html', {
         'candidatures': qs,
-        'departements': Departement.objects.all(),
     })
 
 
@@ -464,7 +481,6 @@ def accepter_candidature(request, candidature_id):
     form = AccepterCandidatureForm(request.POST)
     if form.is_valid():
         _, _, lien_activation = candidature.accepter(
-            departement=form.cleaned_data['departement'],
             traite_par=request.user.profil_rh,
             date_debut=form.cleaned_data['date_debut'],
             date_fin=form.cleaned_data['date_fin'],
@@ -986,6 +1002,33 @@ def evaluer(request, stage_id):
     })
 
 
+@role_required(User.Role.MAITRE_STAGE)
+def mes_affectations(request):
+    """
+    Page dédiée du maître de stage pour répondre aux propositions
+    d'encadrement (affectations de stagiaires) : c'est ici — et non plus
+    seulement dans le tableau de bord — qu'il accepte ou refuse, et c'est
+    vers cette page que pointe désormais l'email reçu lors d'une nouvelle
+    proposition.
+    """
+    profil = request.user.profil_maitre_stage
+
+    demandes_en_attente = DemandeEncadrement.objects.filter(
+        maitre_de_stage_demande=profil, statut=DemandeEncadrement.Statut.EN_ATTENTE,
+    ).select_related('stage__stagiaire__user', 'stage__departement').order_by('-date_demande')
+
+    historique = DemandeEncadrement.objects.filter(
+        maitre_de_stage_demande=profil,
+    ).exclude(statut=DemandeEncadrement.Statut.EN_ATTENTE) \
+     .select_related('stage__stagiaire__user', 'stage__departement') \
+     .order_by('-date_reponse')[:20]
+
+    return render(request, 'appStage/mes_affectations.html', {
+        'demandes_en_attente': demandes_en_attente,
+        'historique': historique,
+    })
+
+
 @require_POST
 @role_required(User.Role.MAITRE_STAGE)
 def repondre_demande_encadrement(request, demande_id, reponse):
@@ -998,9 +1041,13 @@ def repondre_demande_encadrement(request, demande_id, reponse):
         demande.accepter()
         messages.success(request, f"Vous encadrez désormais {demande.stage.stagiaire.user.get_full_name()}.")
     else:
-        demande.refuser()
-        messages.success(request, "Demande refusée.")
-    return redirect('appStage:dashboard_tuteur')
+        motif = request.POST.get('motif', '').strip()
+        if not motif:
+            messages.error(request, "Merci d'indiquer un motif de refus : il sera transmis au directeur.")
+            return redirect('appStage:mes_affectations')
+        demande.refuser(motif)
+        messages.success(request, "Refus transmis au directeur.")
+    return redirect('appStage:mes_affectations')
 
 
 # =========================================================

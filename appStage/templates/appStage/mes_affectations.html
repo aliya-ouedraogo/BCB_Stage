@@ -1,0 +1,104 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Affectations - BCBStageFlow{% endblock %}
+
+{% block page_eyebrow %}<span class="eyebrow">Espace Maître de Stage</span>{% endblock %}
+{% block page_title %}Affectations{% endblock %}
+{% block page_subtitle %}<p style="color:var(--color-text-muted); font-size:14px; margin-top:4px;">Acceptez ou refusez les stagiaires que l'on vous propose d'encadrer.</p>{% endblock %}
+
+{% block dashboard_content %}
+
+  {% if demandes_en_attente %}
+    <div class="alert-banner-stack">
+      <div class="alert-banner alert-banner--warning">
+        <span class="alert-banner-dot"></span>
+        <span>
+          <strong>{{ demandes_en_attente|length }} affectation{{ demandes_en_attente|length|pluralize }} en attente</strong>
+          de votre réponse ci-dessous.
+        </span>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="panel" style="margin-bottom:24px;">
+    <div class="panel-title-row">
+      <h2 class="panel-title" style="margin-bottom:0;">En attente de réponse</h2>
+      <span class="count-badge">{{ demandes_en_attente|length }}</span>
+    </div>
+
+    <div class="todo-list">
+      {% for demande in demandes_en_attente %}
+        <div class="todo-item">
+          <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
+            <i data-lucide="user-plus"></i>
+          </span>
+          <div class="todo-content" style="flex:1;">
+            <div class="todo-title">Proposition d'encadrement</div>
+            <div class="todo-desc">
+              Le directeur du service {{ demande.stage.departement.nom }} vous propose d'encadrer
+              <strong>{{ demande.stage.stagiaire.user.get_full_name }}</strong>
+              ({{ demande.stage.intitule_poste }}).
+            </div>
+            <div class="todo-desc" style="margin-top:6px; color:var(--color-text-faint); display:flex; align-items:center; gap:5px;">
+              <i data-lucide="clock" style="width:13px;height:13px;"></i> Proposée {{ demande.date_demande|timesince }}
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'accepter' %}" class="form-avec-chargement">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Confirmation…">Accepter</button>
+              </form>
+              <button type="button" class="btn btn-outline btn-sm"
+                      onclick="document.getElementById('motif-refus-{{ demande.id }}').classList.toggle('open')">
+                Refuser
+              </button>
+            </div>
+            <div class="refus-encadrement-panel" id="motif-refus-{{ demande.id }}">
+              <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'refuser' %}" class="form-avec-chargement">
+                {% csrf_token %}
+                <textarea name="motif" rows="2" required
+                          placeholder="Motif du refus (obligatoire) : sera transmis au directeur, le stagiaire n'en sera pas informé."></textarea>
+                <button type="submit" class="btn btn-outline btn-sm" style="margin-top:8px;" data-loading-text="Envoi…">
+                  Confirmer le refus
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucune affectation en attente pour le moment.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel-title">Historique des réponses</h2>
+
+    <div class="todo-list">
+      {% for demande in historique %}
+        <div class="todo-item">
+          <span class="todo-icon"
+                style="background:{% if demande.statut == 'ACCEPTEE' %}var(--color-success-bg); color:var(--color-success)
+                       {% else %}var(--color-danger-bg); color:var(--color-danger){% endif %};">
+            <i data-lucide="{% if demande.statut == 'ACCEPTEE' %}check{% else %}x{% endif %}"></i>
+          </span>
+          <div class="todo-content" style="flex:1;">
+            <div class="todo-title">{{ demande.stage.stagiaire.user.get_full_name }}</div>
+            <div class="todo-desc">
+              Service {{ demande.stage.departement.nom }}
+              {% if demande.date_reponse %}• répondu {{ demande.date_reponse|timesince }} avant{% endif %}
+            </div>
+            {% if demande.statut == 'REFUSEE' and demande.motif_refus %}
+              <div class="todo-desc" style="margin-top:6px;">Motif : {{ demande.motif_refus }}</div>
+            {% endif %}
+          </div>
+          <span class="badge {% if demande.statut == 'ACCEPTEE' %}badge-success{% else %}badge-warning{% endif %}">
+            {{ demande.get_statut_display }}
+          </span>
+        </div>
+      {% empty %}
+        <p style="color:var(--color-text-muted); font-size:14px;">Aucune réponse enregistrée pour le moment.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endblock %}

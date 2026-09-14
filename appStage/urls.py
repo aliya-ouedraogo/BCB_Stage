@@ -41,6 +41,7 @@ urlpatterns = [
 
     # --- Maître de stage ---
     path('tuteur/', views.dashboard_tuteur, name='dashboard_tuteur'),
+    path('tuteur/affectations/', views.mes_affectations, name='mes_affectations'),
     path('tuteur/mes-stagiaires/', views.mes_stagiaires, name='mes_stagiaires'),
     path('tuteur/documents-recus/', views.documents_recus, name='documents_recus'),
     path('tuteur/assigner-mission/', views.assigner_mission, name='assigner_mission'),

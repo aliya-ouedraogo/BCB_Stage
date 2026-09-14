@@ -17,7 +17,7 @@
       <div class="form-errors">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" class="form-avec-chargement">
       {% csrf_token %}
 
       <div class="form-row">
@@ -62,7 +62,7 @@
 
       <div class="eval-actions">
         <a href="{% url 'appStage:mes_stagiaires' %}" class="btn btn-outline">Annuler</a>
-        <button type="submit" class="btn btn-primary"><i data-lucide="send"></i> Assigner la mission</button>
+        <button type="submit" class="btn btn-primary" data-loading-text="Envoi…"><i data-lucide="send"></i> Assigner la mission</button>
       </div>
     </form>
   </div>

@@ -29,7 +29,7 @@
     </div>
   </div>
 
-  <form method="post" class="panel">
+  <form method="post" class="panel form-avec-chargement">
     {% csrf_token %}
 
     <div class="form-group" style="margin-bottom:24px;">
@@ -104,7 +104,7 @@
 
     <div class="eval-actions">
       <a href="{% url 'appStage:fiche_stagiaire' stage.id %}" class="btn btn-outline">Annuler</a>
-      <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Enregistrer l'évaluation</button>
+      <button type="submit" class="btn btn-primary" data-loading-text="Enregistrement…"><i data-lucide="save"></i> Enregistrer l'évaluation</button>
     </div>
   </form>
 

@@ -47,7 +47,7 @@ class CandidaturePubliqueForm(forms.ModelForm):
         model = Candidature
         fields = [
             'nom_complet', 'email', 'telephone', 'poste_souhaite',
-            'filiere', 'annee_etude', 'departement_souhaite',
+            'filiere', 'annee_etude',
             'cv', 'lettre_motivation', 'piece_identite', 'avec_soutenance_souhaite',
         ]
         labels = {
@@ -57,14 +57,12 @@ class CandidaturePubliqueForm(forms.ModelForm):
             'poste_souhaite': "Poste souhaité",
             'filiere': "Filière",
             'annee_etude': "Année d'étude actuelle",
-            'departement_souhaite': "Département souhaité",
             'cv': "CV",
             'lettre_motivation': "Lettre de motivation",
             'piece_identite': "Copie de la CNIB",
             'avec_soutenance_souhaite': "Ce stage donnera lieu à une soutenance / un rapport de fin de stage",
         }
         widgets = {
-            'departement_souhaite': forms.Select(attrs={'required': False}),
             'telephone': forms.TextInput(attrs={
                 'placeholder': "70000000",
                 'inputmode': 'numeric',
@@ -137,10 +135,6 @@ class EvaluationForm(forms.ModelForm):
 
 
 class AccepterCandidatureForm(forms.Form):
-    departement = forms.ModelChoiceField(
-        queryset=Departement.objects.all(), label="Département d'affectation",
-        empty_label="Choisir un département…",
-    )
     date_debut = forms.DateField(label="Date de début", widget=forms.DateInput(attrs={'type': 'date'}))
     date_fin = forms.DateField(label="Date de fin", widget=forms.DateInput(attrs={'type': 'date'}))
     avec_soutenance = forms.BooleanField(

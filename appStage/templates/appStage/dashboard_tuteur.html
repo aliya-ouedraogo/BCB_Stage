@@ -7,6 +7,19 @@
 
 {% block dashboard_content %}
 
+  {% if demandes_en_attente %}
+    <div class="alert-banner-stack">
+      <a href="{% url 'appStage:mes_affectations' %}" class="alert-banner alert-banner--warning">
+        <span class="alert-banner-dot"></span>
+        <span>
+          <strong>{{ demandes_en_attente|length }} affectation{{ demandes_en_attente|length|pluralize }} en attente</strong>
+          de votre réponse — rendez-vous sur la page Affectations pour accepter ou refuser.
+        </span>
+        <span class="alert-banner-arrow"><i data-lucide="arrow-right"></i></span>
+      </a>
+    </div>
+  {% endif %}
+
   {% if fin_de_periode %}
     <div class="panel panel--dark deadline-panel" style="margin-bottom:24px;">
       <div class="deadline-copy">
@@ -88,31 +101,6 @@
             </div>
           {% endfor %}
 
-          {% for demande in demandes_en_attente %}
-            <div class="todo-item">
-              <span class="todo-icon" style="background:var(--color-warning-bg); color:var(--color-warning);">
-                <i data-lucide="user-plus"></i>
-              </span>
-              <div class="todo-content" style="flex:1;">
-                <div class="todo-title">Proposition d'encadrement</div>
-                <div class="todo-desc">
-                  Le directeur du service {{ demande.stage.departement.nom }} vous propose d'encadrer
-                  {{ demande.stage.stagiaire.user.get_full_name }}
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                  <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'accepter' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary btn-sm">Accepter</button>
-                  </form>
-                  <form method="post" action="{% url 'appStage:repondre_demande_encadrement' demande.id 'refuser' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline btn-sm">Refuser</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          {% endfor %}
-
           {% for entry in presences_a_confirmer %}
             <a href="{% url 'appStage:fiche_stagiaire' entry.stage.id %}#presence" class="todo-item">
               <span class="todo-icon" style="background:var(--color-success-bg); color:var(--color-success);">
@@ -125,7 +113,7 @@
             </a>
           {% endfor %}
 
-          {% if not rapports_a_valider and not demandes_en_attente and not presences_a_confirmer %}
+          {% if not rapports_a_valider and not presences_a_confirmer %}
             <p style="color:var(--color-text-muted); font-size:14px;">Rien à valider pour le moment.</p>
           {% endif %}
         </div>

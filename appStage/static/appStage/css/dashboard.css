@@ -255,6 +255,7 @@
    --------------------------------------------------------- */
 .dash-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
 .dash-grid--inverse { grid-template-columns: 340px 1fr; }
+.dash-subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
 
 .dash-col { display: flex; flex-direction: column; gap: 24px; }
 
@@ -926,6 +927,7 @@ a.todo-item:hover { background: var(--color-bg); }
 .doc-icon--pdf { background: var(--color-primary-soft); color: var(--color-primary); }
 .doc-icon--doc { background: var(--color-success-bg); color: var(--color-success); }
 .doc-icon--folder { background: #f0f0f3; color: var(--color-text-muted); }
+.doc-info { min-width: 0; }
 .doc-info .doc-name { font-size: 13.5px; font-weight: 600; }
 .doc-info .doc-meta { font-size: 12px; color: var(--color-text-faint); margin-top: 1px; }
 
@@ -1026,9 +1028,12 @@ a.todo-item:hover { background: var(--color-bg); }
   padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
   justify-content: space-around;
   align-items: stretch;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .bottom-nav-item {
   flex: 1;
+  min-width: 62px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1039,10 +1044,23 @@ a.todo-item:hover { background: var(--color-bg); }
   font-size: 10.5px;
   font-weight: 600;
   text-align: center;
+  white-space: nowrap;
 }
 .bottom-nav-item [data-lucide] { width: 20px; height: 20px; }
 .bottom-nav-item.active { color: #fff; }
 .bottom-nav-item.active [data-lucide] { color: var(--color-primary-light, #8b7bff); }
+
+/* Avec beaucoup d'entrées (ex. rôle RH : 9 items), un partage égal de la
+   largeur de l'écran écraserait chaque icône/libellé. Au-delà de 5 items,
+   on bascule sur une largeur fixe et lisible par item, avec défilement
+   horizontal, plutôt que de tout comprimer pour que ça tienne. */
+.bottom-nav:has(.bottom-nav-item:nth-child(6)) {
+  justify-content: flex-start;
+}
+.bottom-nav:has(.bottom-nav-item:nth-child(6)) .bottom-nav-item {
+  flex: 0 0 auto;
+  width: 74px;
+}
 
 /* ---------------------------------------------------------
    Onglets de navigation interne (Fiche Stagiaire)
@@ -1335,6 +1353,80 @@ a.todo-item:hover { background: var(--color-bg); }
 .doc-chip:hover { background: var(--color-primary); color: #fff; }
 .doc-chip [data-lucide] { width: 13px; height: 13px; }
 .doc-chip-empty { font-size: 12.5px; color: var(--color-text-faint); }
+
+/* Section "Documents du candidat" — volontairement plus visible que de
+   simples chips, pour inciter le RH à ouvrir les pièces jointes avant de
+   se prononcer sur la candidature. */
+.candidature-docs {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+.candidature-docs-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+.candidature-docs-title [data-lucide] { width: 13px; height: 13px; }
+.candidature-docs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.doc-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  min-width: 168px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+.doc-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.doc-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.doc-card-icon [data-lucide] { width: 17px; height: 17px; }
+.doc-card-text { display: flex; flex-direction: column; gap: 1px; }
+.doc-card-text strong { font-size: 13px; color: var(--color-text); }
+.doc-card-text span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.doc-card-text span [data-lucide] { width: 11px; height: 11px; }
+.doc-card--missing {
+  border-style: dashed;
+  border-color: var(--color-border);
+  opacity: 0.7;
+}
+.doc-card--missing .doc-card-icon { background: var(--color-bg); color: var(--color-text-faint); }
+.doc-card--missing .doc-card-text span { color: var(--color-text-faint); }
 /* ---------------------------------------------------------
    Champs de formulaire (candidatures, évaluation, paramètres...)
    --------------------------------------------------------- */
@@ -1376,7 +1468,7 @@ a.todo-item:hover { background: var(--color-bg); }
 
 .candidature-form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr auto;
   gap: 10px;
   margin-top: 14px;
   align-items: end;
@@ -1384,6 +1476,66 @@ a.todo-item:hover { background: var(--color-bg); }
 .candidature-form-row .form-group { gap: 4px; }
 .candidature-form-row label { font-size: 11.5px; }
 .candidature-form-row input, .candidature-form-row select { height: 40px; font-size: 13.5px; }
+
+/* ---------------------------------------------------------
+   Panneau de motif de refus (proposition d'encadrement, tuteur)
+   --------------------------------------------------------- */
+.refus-encadrement-panel { display: none; margin-top: 10px; }
+.refus-encadrement-panel.open { display: block; }
+.refus-encadrement-panel textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* ---------------------------------------------------------
+   Règles anciennement dans un bloc page_css (donc dans <head>) de leur
+   page respective : jamais rechargées par une navigation htmx, qui ne
+   remplace que #contenu-page. Résultat concret pour l'utilisateur : les
+   panneaux/formulaires normalement repliés s'affichaient tous ouverts
+   d'un coup en arrivant via un lien de la sidebar (il fallait un Ctrl+F5,
+   c'est-à-dire un rechargement complet, pour que ça redevienne correct).
+   Regroupées ici, elles s'appliquent quelle que soit la façon dont on
+   arrive sur la page.
+   --------------------------------------------------------- */
+.candidature-accept-panel, .candidature-refuse-panel { display: none; }
+.candidature-accept-panel.open, .candidature-refuse-panel.open {
+  display: block;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.form-creer-tuteur,
+.form-creer-directeur,
+.form-creer-departement {
+  display: none;
+  margin: 20px 0;
+  padding: 18px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+.form-creer-tuteur.open,
+.form-creer-directeur.open,
+.form-creer-departement.open { display: block; }
+
+.doc-accordion summary { position: relative; }
+.doc-accordion summary::-webkit-details-marker { display: none; }
+.doc-accordion summary::marker { content: ""; }
+.doc-accordion .count-badge {
+  min-width: 24px; height: 24px; border-radius: 50%;
+  background: var(--color-primary); color: #fff; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; padding: 0 6px;
+}
+.doc-accordion .doc-accordion-toggle [data-lucide] { width: 14px; height: 14px; transition: transform 0.15s ease; }
+.doc-accordion[open] .doc-accordion-toggle [data-lucide] { transform: rotate(180deg); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 
 /* ---------------------------------------------------------
    État vide générique
@@ -1536,6 +1688,7 @@ a.todo-item:hover { background: var(--color-bg); }
 @media (max-width: 1180px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-grid { grid-template-columns: 1fr; }
+  .dash-subgrid { grid-template-columns: 1fr; }
   .mini-grid { grid-template-columns: 1fr; }
   .intern-grid { grid-template-columns: 1fr; }
   .progress-metrics { grid-template-columns: repeat(3, 1fr); }
@@ -1562,6 +1715,26 @@ a.todo-item:hover { background: var(--color-bg); }
 
   .settings-layout { grid-template-columns: 1fr; }
   .settings-tabs { flex-direction: row; overflow-x: auto; position: static; }
+
+  /* Lignes "personne" (stagiaires, tuteurs, directeurs, affectation...) :
+     avatar + nom restent groupés sur la première ligne, le reste (dates,
+     puces, select, bouton) passe à la ligne plutôt que de se retrouver
+     écrasé dans une colonne minuscule. */
+  .person-row { flex-wrap: wrap; row-gap: 10px; }
+  .person-row .person-info { min-width: 180px; }
+  .person-row .champ-departement,
+  .person-row select.form-select { max-width: none !important; flex: 1 1 100%; order: 3; }
+  .person-row .bouton-enregistrer { order: 4; }
+
+  .candidature-docs-grid { gap: 8px; }
+  .doc-card { min-width: 0; flex: 1 1 100%; }
+
+  /* Lignes de document (mes documents, documents reçus, fiche stagiaire) :
+     l'icône + le nom du document restent groupés, les boutons d'action
+     (Modifier / Signer / Télécharger) passent à la ligne plutôt que de
+     provoquer un débordement horizontal. */
+  .doc-row { flex-wrap: wrap; row-gap: 8px; }
+  .doc-row .doc-info { flex-basis: 160px; }
 }
 
 @media (max-width: 480px) {

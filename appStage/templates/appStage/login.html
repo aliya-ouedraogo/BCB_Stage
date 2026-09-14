@@ -33,7 +33,7 @@
         </div>
       {% endif %}
 
-      <form method="post" class="auth-fields" hx-boost="false">
+      <form method="post" class="auth-fields form-avec-chargement" hx-boost="false">
         {% csrf_token %}
 
         <div class="form-group">
@@ -48,7 +48,7 @@
           {% for error in form.password.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block">
+        <button type="submit" class="btn btn-primary btn-block" data-loading-text="Connexion…">
           Se connecter
           <i data-lucide="arrow-right"></i>
         </button>
