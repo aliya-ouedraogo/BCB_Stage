@@ -8,7 +8,6 @@
   display: flex;
   min-height: 100vh;
   background: var(--color-bg);
-  overflow-x: hidden;
 }
 
 /* ---------------------------------------------------------
@@ -1736,6 +1735,9 @@ a.todo-item:hover { background: var(--color-bg); }
   cursor: pointer;
 }
 .settings-avatar-edit [data-lucide] { width: 13px; height: 13px; }
+
+.settings-form-actions { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.settings-form-actions .btn { flex: 1 1 auto; }
 .settings-avatar-row .form-group { display: none; } /* input file natif caché, déclenché par le crayon */
 
 .input-icon-wrap { position: relative; display: flex; align-items: center; }
@@ -1821,4 +1823,12 @@ a.todo-item:hover { background: var(--color-bg); }
   .topbar-user .user-name { display: none; }
   .search-input { display: none; }
   .detail-tabs { gap: 16px; overflow-x: auto; }
+
+  /* Boutons Annuler / Enregistrer (Paramètres) : empilés en pleine largeur
+     plutôt que côte à côte, sinon "Enregistrer les modifications" force un
+     débordement horizontal sur les petits écrans. La modale d'action
+     principale passe en premier visuellement (elle est seconde dans le
+     HTML, cf. accessibilité au clavier). */
+  .settings-form-actions { flex-direction: column-reverse; }
+  .settings-form-actions .btn { width: 100%; }
 }

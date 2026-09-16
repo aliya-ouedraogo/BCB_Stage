@@ -12,8 +12,6 @@
     <nav class="settings-tabs">
       <button class="settings-tab {% if onglet_actif == 'profil' %}active{% endif %}" data-tab="profil"><i data-lucide="user"></i> Profil</button>
       <button class="settings-tab {% if onglet_actif == 'securite' %}active{% endif %}" data-tab="securite"><i data-lucide="shield"></i> Sécurité</button>
-      <button class="settings-tab" data-tab="compte"><i data-lucide="user-cog"></i> Compte</button>
-      <button class="settings-tab" data-tab="notifications"><i data-lucide="bell"></i> Notifications</button>
     </nav>
 
     <div class="settings-content">
@@ -82,7 +80,7 @@
               </div>
             </div>
 
-            <div style="display:flex; gap:10px; margin-top:8px;">
+            <div class="settings-form-actions">
               <a href="{% url user.get_dashboard_url_name %}" class="btn btn-outline">Annuler</a>
               <button type="submit" class="btn btn-primary" data-loading-text="Enregistrement…">Enregistrer les modifications</button>
             </div>
@@ -126,22 +124,8 @@
       </div>
 
       <!-- Onglets pas encore développés -->
-      <div class="settings-panel" data-panel="compte">
-        <div class="panel empty-state">
-          <i data-lucide="user-cog"></i>
-          <h2>Bientôt disponible</h2>
-          <p>La gestion avancée du compte (nom d'utilisateur, suppression de compte…) arrivera dans une prochaine version.</p>
-        </div>
-      </div>
-      <div class="settings-panel" data-panel="notifications">
-        <div class="panel empty-state">
-          <i data-lucide="bell"></i>
-          <h2>Bientôt disponible</h2>
-          <p>Les préférences de notification arriveront dans une prochaine version.</p>
-        </div>
-      </div>
 
-      <div class="panel" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+      <div class="panel" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
         <div>
           <div style="font-weight:700; font-size:14.5px;">Se déconnecter</div>
           <div style="font-size:13px; color:var(--color-text-muted); margin-top:2px;">Met fin à votre session sur cet appareil.</div>

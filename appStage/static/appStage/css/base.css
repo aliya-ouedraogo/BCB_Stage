@@ -4,7 +4,17 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; background: var(--color-bg); }
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-bg);
+  /* Empêche tout débordement horizontal accidentel (contenu trop large sur
+     mobile) de faire défiler toute la page latéralement, sans toucher au
+     défilement vertical normal : contrairement à la même règle posée sur un
+     conteneur interne comme .dashboard-body, ça ne crée pas de contexte de
+     défilement imbriqué susceptible de casser un position:sticky (ex. la
+     sidebar) à l'intérieur. */
+  overflow-x: hidden;
+}
 
 body {
   margin: 0;
