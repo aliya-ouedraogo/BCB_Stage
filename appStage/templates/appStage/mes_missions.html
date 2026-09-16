@@ -14,7 +14,7 @@
       {% for mission in missions %}
         <div class="mission-item {% if mission.statut == 'TERMINEE' %}is-done{% endif %}">
           <span class="mission-item-icon"><i data-lucide="git-branch"></i></span>
-          <div style="flex:1;">
+          <div class="mission-item-body">
             <div class="mission-item-title">{{ mission.titre }}</div>
             <div class="mission-item-sub">
               {{ mission.equipe }}
@@ -32,13 +32,13 @@
             <span class="badge badge-info">À faire</span>
           {% endif %}
           {% if mission.statut == 'A_FAIRE' %}
-            <form method="post" action="{% url 'appStage:avancer_mission' mission.id %}" style="margin-left:10px;">
+            <form method="post" action="{% url 'appStage:avancer_mission' mission.id %}" class="mission-item-actions">
               {% csrf_token %}
               <input type="hidden" name="retour" value="{% url 'appStage:mes_missions' %}">
               <button type="submit" class="btn btn-outline btn-sm">Démarrer</button>
             </form>
           {% elif mission.statut == 'EN_COURS' %}
-            <div style="display:flex; gap:8px; margin-left:10px;">
+            <div class="mission-item-actions">
               <a href="{% url 'appStage:soumettre_document' %}?mission={{ mission.id }}" class="btn btn-primary btn-sm">
                 <i data-lucide="upload"></i> Soumettre le livrable
               </a>

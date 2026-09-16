@@ -667,12 +667,15 @@ a.todo-item:hover { background: var(--color-bg); }
 .alert-banner-arrow [data-lucide] { width: 16px; height: 16px; }
 .todo-content .todo-title { font-size: 14px; font-weight: 700; line-height: 1.35; }
 .todo-content .todo-desc { font-size: 13px; color: var(--color-text-muted); margin-top: 3px; }
+.todo-content { min-width: 0; }
 
 .panel-title { font-family: var(--font-heading); font-size: 17px; font-weight: 700; margin-bottom: 16px; }
 .panel-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 16px;
 }
 .panel-title-row .count-badge {
@@ -1193,13 +1196,16 @@ a.todo-item:hover { background: var(--color-bg); }
 .mission-item {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 10px 14px;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 }
 .mission-item:last-child { margin-bottom: 0; }
+.mission-item-body { flex: 1 1 200px; min-width: 0; }
+.mission-item-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .mission-item-icon {
   width: 40px;
   height: 40px;
@@ -1798,6 +1804,30 @@ a.todo-item:hover { background: var(--color-bg); }
   .settings-tab { flex: 1 1 calc(50% - 2px); justify-content: center; white-space: nowrap; }
   .form-row { grid-template-columns: 1fr; }
 
+  /* Titre de page centré entre le bouton burger et les actions de la
+     topbar, plutôt que collé à gauche juste après le burger. */
+  .topbar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; }
+  .topbar-heading { text-align: center; }
+
+  /* Bandeau "Fin de Période" (tableau de bord tuteur) : le bouton "Remplir
+     l'Évaluation de Fin de Stage" est trop long pour garder sa hauteur et
+     sa largeur fixes sur un petit écran, il prend toute la largeur
+     disponible et peut passer sur plusieurs lignes proprement. */
+  .deadline-panel .btn {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 12px 20px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Badges (nom de tuteur, statut...) : évite qu'un nom un peu long soit
+     tronqué brutalement par la protection anti-débordement horizontal de
+     la page, en autorisant le retour à la ligne plutôt que de forcer une
+     seule ligne. */
+  .badge { white-space: normal; text-align: center; }
+
   /* Lignes "personne" (stagiaires, tuteurs, directeurs, affectation...) :
      avatar + nom restent groupés sur la première ligne, le reste (dates,
      puces, select, bouton) passe à la ligne plutôt que de se retrouver
@@ -1831,4 +1861,10 @@ a.todo-item:hover { background: var(--color-bg); }
      HTML, cf. accessibilité au clavier). */
   .settings-form-actions { flex-direction: column-reverse; }
   .settings-form-actions .btn { width: 100%; }
+
+  /* Actions d'une mission (Démarrer / Soumettre / Marquer terminée) :
+     pleine largeur sur très petit écran plutôt qu'alignées à droite via
+     margin-left:auto, qui pouvait les coller contre le bord de la carte. */
+  .mission-item-actions { width: 100%; margin-left: 0; }
+  .mission-item-actions .btn { flex: 1 1 auto; }
 }
