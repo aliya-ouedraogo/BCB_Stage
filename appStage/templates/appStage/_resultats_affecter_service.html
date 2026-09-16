@@ -1,5 +1,5 @@
 {% for stage in stages %}
-  <form method="post" class="person-row affectation-row{% if stage_maj|stringformat:"s" == stage.id|stringformat:"s" %} affectation-row--maj{% endif %}" style="flex-wrap:wrap;">
+  <form method="post" class="person-row affectation-row{% if stage_maj|stringformat:"s" == stage.id|stringformat:"s" %} affectation-row--maj{% endif %} form-avec-chargement" style="flex-wrap:wrap;">
     {% csrf_token %}
     <input type="hidden" name="stage_id" value="{{ stage.id }}">
     {% if stage.stagiaire.user.photo %}
@@ -35,7 +35,7 @@
         <option value="{{ dep.id }}" {% if dep.id == stage.departement_id %}selected{% endif %}>{{ dep.nom }}</option>
       {% endfor %}
     </select>
-    <button type="submit" class="btn btn-outline btn-sm bouton-enregistrer" disabled>Enregistrer</button>
+    <button type="submit" class="btn btn-outline btn-sm bouton-enregistrer" disabled data-loading-text="Enregistrement…">Enregistrer</button>
     {% if stage_maj|stringformat:"s" == stage.id|stringformat:"s" %}
       <span class="confirmation-enregistrement">
         <i data-lucide="check-circle-2" style="width:15px;height:15px;"></i> Enregistré

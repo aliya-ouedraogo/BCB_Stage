@@ -1,3 +1,5 @@
+import calendar
+
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
 from django.contrib.auth.forms import SetPasswordForm
@@ -5,10 +7,19 @@ from django.contrib.auth.forms import SetPasswordForm
 from .models import Candidature, Departement, DocumentStage, Evaluation, Mission, ProfilMaitreStage, User
 
 
+def _ajouter_mois(date_depart, mois):
+    """Ajoute un nombre de mois calendaires à une date (jour ajusté si le mois cible est plus court)."""
+    mois_total = date_depart.month - 1 + mois
+    annee = date_depart.year + mois_total // 12
+    mois_cible = mois_total % 12 + 1
+    jour = min(date_depart.day, calendar.monthrange(annee, mois_cible)[1])
+    return date_depart.replace(year=annee, month=mois_cible, day=jour)
+
+
 class ActiverCompteForm(SetPasswordForm):
     """
     Étend le SetPasswordForm standard de Django avec un champ nom
-    d'utilisateur choisi par la personne elle-même — sans ça, elle doit
+    d'utilisateur choisi par la personne elle-même, sans ça, elle doit
     deviner le nom auto-généré à partir de son nom complet pour se
     reconnecter ensuite (ex. « borisouedraogo », pas « Boris » ni « Boris
     Ouedraogo »), ce qui n'est pas intuitif.
@@ -76,7 +87,7 @@ class CandidaturePubliqueForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Documents obligatoires à la candidature (le formulaire ne le
         # précise pas nativement puisque ces champs sont optionnels côté
-        # modèle — un stagiaire peut très bien ne jamais avoir eu besoin
+        # modèle, un stagiaire peut très bien ne jamais avoir eu besoin
         # de déposer de CV après son embauche, par exemple).
         self.fields['cv'].required = True
         self.fields['lettre_motivation'].required = True
@@ -109,7 +120,7 @@ class CandidaturePubliqueForm(forms.ModelForm):
 
 
 class EvaluationForm(forms.ModelForm):
-    """Notation par critère (sur 20 chacun) + commentaire — voir Evaluation.note (moyenne calculée)."""
+    """Notation par critère (sur 20 chacun) + commentaire, voir Evaluation.note (moyenne calculée)."""
 
     class Meta:
         model = Evaluation
@@ -134,18 +145,29 @@ class EvaluationForm(forms.ModelForm):
         }
 
 
-class AccepterCandidatureForm(forms.Form):
-    date_debut = forms.DateField(label="Date de début", widget=forms.DateInput(attrs={'type': 'date'}))
-    date_fin = forms.DateField(label="Date de fin", widget=forms.DateInput(attrs={'type': 'date'}))
+class ProgrammerEntretienForm(forms.Form):
+    date_entretien = forms.DateField(label="Date de l'entretien", widget=forms.DateInput(attrs={'type': 'date'}))
     avec_soutenance = forms.BooleanField(
         label="Stage avec soutenance / rapports / tuteur", required=False, initial=True,
     )
 
+
+class PlanifierStageForm(forms.Form):
+    DUREE_MINIMALE_MOIS = 2
+
+    date_debut = forms.DateField(label="Date de début", widget=forms.DateInput(attrs={'type': 'date'}))
+    date_fin = forms.DateField(label="Date de fin", widget=forms.DateInput(attrs={'type': 'date'}))
+
     def clean(self):
         cleaned = super().clean()
         debut, fin = cleaned.get('date_debut'), cleaned.get('date_fin')
-        if debut and fin and fin <= debut:
-            raise forms.ValidationError("La date de fin doit être postérieure à la date de début.")
+        if debut and fin:
+            fin_minimale = _ajouter_mois(debut, self.DUREE_MINIMALE_MOIS)
+            if fin < fin_minimale:
+                raise forms.ValidationError(
+                    f"La période de stage doit durer au moins {self.DUREE_MINIMALE_MOIS} mois "
+                    f"(date de fin à partir du {fin_minimale.strftime('%d/%m/%Y')})."
+                )
         return cleaned
 
 
@@ -196,7 +218,7 @@ class AssignerMissionForm(forms.ModelForm):
 class SoumettreDocumentForm(forms.ModelForm):
     """
     Le stagiaire ne peut soumettre que des documents de type RAPPORT ou
-    AUTRE — CONVENTION/CONTRAT restent des documents administratifs émis
+    AUTRE, CONVENTION/CONTRAT restent des documents administratifs émis
     par le RH, pas par le stagiaire lui-même. Il ne choisit plus de
     destinataire : il dépose simplement son fichier, qui devient visible
     par le directeur de son service et son maître de stage (tous deux

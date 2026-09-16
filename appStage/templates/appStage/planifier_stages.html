@@ -1,0 +1,122 @@
+{% extends "appStage/base_dashboard.html" %}
+
+{% block title %}Entretiens - BCBStageFlow{% endblock %}
+
+{% block page_title %}Entretiens{% endblock %}
+
+{% block dashboard_content %}
+
+  {% if candidatures %}
+    <div class="alert-banner-stack">
+      <div class="alert-banner alert-banner--warning">
+        <span class="alert-banner-dot"></span>
+        <span>
+          <strong>{{ candidatures|length }} candidat{{ candidatures|length|pluralize }} en attente</strong>
+          de la période de stage, une fois l'entretien passé.
+        </span>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="panel">
+    <div class="panel-title-row">
+      <h2 class="panel-title" style="margin-bottom:0;">Entretiens programmés</h2>
+      <span class="count-badge">{{ candidatures|length }}</span>
+    </div>
+
+    {% for c in candidatures %}
+      <div class="candidature-card" style="margin-top:16px;">
+        <div class="candidature-head">
+          <div class="candidature-identity">
+            <span class="avatar">{{ c.nom_complet|first }}</span>
+            <div>
+              <div class="person-name">{{ c.nom_complet }}</div>
+              <div class="person-role">{{ c.poste_souhaite }} &bull; {{ c.email }}</div>
+              <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+                <span class="badge badge-info">
+                  <i data-lucide="calendar-clock" style="width:12px;height:12px;"></i>
+                  Entretien le {{ c.date_entretien|date:"d/m/Y" }}
+                </span>
+                <span class="chip">
+                  <i data-lucide="{% if c.avec_soutenance_souhaite %}flag{% else %}minus-circle{% endif %}" style="width:12px;height:12px;"></i>
+                  {% if c.avec_soutenance_souhaite %}Avec soutenance{% else %}Sans soutenance{% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form method="post" action="{% url 'appStage:finaliser_stage_candidature' c.id %}"
+              class="form-avec-chargement form-periode-stage" data-duree-min-mois="2" style="margin-top:14px;">
+          {% csrf_token %}
+          <p style="font-size:12.5px; color:var(--color-text-muted); margin:0 0 10px;">
+            Le compte du stagiaire et son accès seront créés à la confirmation, l'affectation à un service se fait
+            ensuite depuis la page <strong>Affectation</strong>. La période doit couvrir au moins 2 mois.
+          </p>
+          <div class="candidature-form-row">
+            <div class="form-group">
+              <label>Date de début</label>
+              <input type="date" name="date_debut" class="champ-date-debut" required>
+            </div>
+            <div class="form-group">
+              <label>Date de fin</label>
+              <input type="date" name="date_fin" class="champ-date-fin" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Confirmation…">Confirmer le stage</button>
+          </div>
+        </form>
+
+        <button type="button" class="btn btn-danger-soft btn-sm" style="width:auto; margin-top:10px;"
+                onclick="document.getElementById('motif-refus-planif-{{ c.id }}').classList.toggle('open')">
+          Refuser
+        </button>
+
+        <div class="refus-encadrement-panel" id="motif-refus-planif-{{ c.id }}">
+          <form method="post" action="{% url 'appStage:refuser_candidature' c.id %}" class="form-avec-chargement">
+            {% csrf_token %}
+            <textarea name="motif" rows="2" required placeholder="Motif du refus (obligatoire) : sera visible par le candidat."></textarea>
+            <button type="submit" class="btn btn-outline btn-sm" style="margin-top:8px;" data-loading-text="Envoi…">
+              Confirmer le refus
+            </button>
+          </form>
+        </div>
+      </div>
+    {% empty %}
+      <div class="empty-state">
+        <i data-lucide="calendar-clock"></i>
+        <h2>Aucun entretien en attente</h2>
+        <p>Les candidats acceptés pour un entretien apparaîtront ici, en attente de la période de stage.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+{% endblock %}
+
+{% block page_js %}
+  <script>
+    // Impose une durée de stage d'au moins 2 mois : dès que la date de
+    // début est choisie, la date de fin ne peut pas être antérieure à
+    // début + 2 mois (attribut "min" natif du champ, contrôlé aussi côté
+    // serveur dans PlanifierStageForm).
+    document.querySelectorAll('.form-periode-stage').forEach(function (form) {
+      var dureeMinMois = parseInt(form.dataset.dureeMinMois, 10) || 2;
+      var champDebut = form.querySelector('.champ-date-debut');
+      var champFin = form.querySelector('.champ-date-fin');
+      if (!champDebut || !champFin) return;
+
+      function ajusterDateFinMin() {
+        if (!champDebut.value) return;
+        var debut = new Date(champDebut.value + 'T00:00:00');
+        debut.setMonth(debut.getMonth() + dureeMinMois);
+        var min = debut.toISOString().slice(0, 10);
+        champFin.min = min;
+        if (champFin.value && champFin.value < min) {
+          champFin.value = min;
+        }
+      }
+
+      champDebut.addEventListener('change', ajusterDateFinMin);
+      ajusterDateFinMin();
+    });
+  </script>
+{% endblock %}

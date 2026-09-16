@@ -30,7 +30,7 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             self.stderr.write(self.style.ERROR(
                 "Commande bloquée : DEBUG=False (probable environnement de production). "
-                "Cette commande supprime tous les comptes existants — à ne lancer qu'en local/démo."
+                "Cette commande supprime tous les comptes existants, à ne lancer qu'en local/démo."
             ))
             return
 
@@ -57,8 +57,8 @@ class Command(BaseCommand):
         profil_rh.save()
 
         # --- Directeurs de service ---
-        # (2 directeurs : un avec un service actif à gérer — propositions en
-        # attente, stagiaires sans maître de stage — l'autre juste pour montrer
+        # (2 directeurs : un avec un service actif à gérer, propositions en
+        # attente, stagiaires sans maître de stage, l'autre juste pour montrer
         # un service "calme", tout est déjà assigné.)
         def creer_directeur(username, prenom, nom, poste, departement):
             u = User.objects.create_user(
@@ -126,7 +126,7 @@ class Command(BaseCommand):
             statut=Stage.Statut.EN_COURS, avec_soutenance=True,
         )
         Mission.objects.create(
-            stage=stage_mariam, titre="Intégration API — Phase 2", equipe="Équipe Backend",
+            stage=stage_mariam, titre="Intégration API, Phase 2", equipe="Équipe Backend",
             description="Finaliser la migration des anciens points de terminaison vers GraphQL.",
             echeance=aujourdhui + datetime.timedelta(days=3), statut=Mission.Statut.EN_COURS,
         )
@@ -149,7 +149,7 @@ class Command(BaseCommand):
             destinataire=DocumentStage.Destinataire.STAGIAIRE, ajoute_par=rh_user,
             statut_signature=DocumentStage.StatutSignature.SIGNE, date_signature=aujourdhui - datetime.timedelta(weeks=4),
         )
-        # Rapport déposé par la stagiaire — notifie automatiquement son
+        # Rapport déposé par la stagiaire, notifie automatiquement son
         # maître de stage ET le directeur du service (nouveau comportement :
         # la stagiaire ne choisit plus de destinataire, elle dépose simplement).
         DocumentStage.objects.create(
@@ -186,7 +186,7 @@ class Command(BaseCommand):
             stage=stage_succes, numero_semaine=9, statut=RapportHebdomadaire.Statut.EN_ATTENTE,
             date_soumission=timezone.now() - datetime.timedelta(hours=2),
         )
-        # Contrat envoyé par le RH, en attente de signature — pour tester la
+        # Contrat envoyé par le RH, en attente de signature, pour tester la
         # page Documents du RH (section "Envoyés") et le compteur associé.
         DocumentStage.objects.create(
             stage=stage_succes, nom="Contrat_Stage_Succes.pdf", type_document=DocumentStage.TypeDocument.CONTRAT,
@@ -199,7 +199,7 @@ class Command(BaseCommand):
                 stage=stage_succes, date=jour, present=True, valide_par_tuteur=(i > 0),
             )
 
-        # --- Stage Aliya : en cours, PAS de maître de stage — proposition du
+        # --- Stage Aliya : en cours, PAS de maître de stage, proposition du
         # directeur en attente de réponse (teste dashboard_tuteur ET
         # affecter_maitre_stage/dashboard_directeur en même temps). Le
         # service RH n'a pas de directeur : cette proposition est donc créée
@@ -217,7 +217,7 @@ class Command(BaseCommand):
             stage=stage_aliya, numero_semaine=5, statut=RapportHebdomadaire.Statut.EN_ATTENTE,
             date_soumission=timezone.now() - datetime.timedelta(days=1),
         )
-        # Convention envoyée par le RH à la stagiaire, pas encore signée —
+        # Convention envoyée par le RH à la stagiaire, pas encore signée,
         # alimente le panneau "À faire" du RH ET le compteur de signatures.
         DocumentStage.objects.create(
             stage=stage_aliya, nom="Convention_Aliya_Oued.pdf",
@@ -230,7 +230,7 @@ class Command(BaseCommand):
         )
 
         # --- Stage Awa : en cours, service SANS directeur et SANS maître de
-        # stage — pour tester l'affichage "service sans directeur" côté RH
+        # stage, pour tester l'affichage "service sans directeur" côté RH
         # (personne à notifier automatiquement) et le cas non bloquant.
         stage_awa = Stage.objects.create(
             stagiaire=profil_awa, departement=dep_reseau,
@@ -254,7 +254,7 @@ class Command(BaseCommand):
         )
         Mission.objects.create(
             stage=stage_geoffroy, titre="Refonte de la charte graphique", equipe="Équipe Design",
-            description="Livrable resté ouvert après la fin du stage — objectif non finalisé à temps.",
+            description="Livrable resté ouvert après la fin du stage, objectif non finalisé à temps.",
             echeance=aujourdhui - datetime.timedelta(weeks=3), statut=Mission.Statut.EN_COURS,
         )
         Evaluation.objects.create(
@@ -290,7 +290,7 @@ class Command(BaseCommand):
         c_refusee.refuser("Profil ne correspondant pas aux prérequis techniques du poste.", profil_rh)
 
         # Candidature acceptée à l'instant du seed, dans un service AVEC
-        # directeur (dep_rh n'en a pas — on utilise dep_dev ici) — pour
+        # directeur (dep_rh n'en a pas, on utilise dep_dev ici), pour
         # vérifier tout de suite dans la console/boîte mail que la
         # notification au directeur part bien à l'acceptation.
         c_acceptee = Candidature.objects.create(
@@ -298,30 +298,39 @@ class Command(BaseCommand):
             poste_souhaite="Stagiaire Assistante RH", filiere="Ressources Humaines", annee_etude='LICENCE_2',
             departement_souhaite=dep_dev, avec_soutenance_souhaite=True,
         )
-        c_acceptee.accepter(
-            departement=dep_dev, traite_par=profil_rh,
-            date_debut=aujourdhui + datetime.timedelta(weeks=1),
-            date_fin=aujourdhui + datetime.timedelta(weeks=13),
+        c_acceptee.programmer_entretien(
+            traite_par=profil_rh,
+            date_entretien=aujourdhui + datetime.timedelta(days=3),
             avec_soutenance=True,
         )
+        _, stage_fatou, _ = c_acceptee.finaliser_stage(
+            date_debut=aujourdhui + datetime.timedelta(weeks=1),
+            date_fin=aujourdhui + datetime.timedelta(weeks=13),
+        )
+        # finaliser_stage() ne fait plus l'affectation de service (déplacée
+        # sur la page Affectation dédiée) : on la simule ici pour retrouver
+        # le comportement de démo attendu (notification envoyée à b.compaore).
+        stage_fatou.departement = dep_dev
+        stage_fatou.save(update_fields=['departement'])
+        stage_fatou.notifier_directeur_affectation()
 
         self.stdout.write(self.style.SUCCESS(
             "\nDonnées de démo créées. Comptes de connexion (mot de passe : DemoPass123) :\n"
             "  - RH               : adminhr\n"
-            "  - Directeur        : b.compaore (Développement Web) — service actif, tout assigné\n"
-            "  - Directeur        : r.sana (Marketing Digital) — service actif, tout assigné\n"
-            "  - Maître de stage  : M.Kader (Développement Web) — encadre Mariam, proposition en\n"
+            "  - Directeur        : b.compaore (Développement Web), service actif, tout assigné\n"
+            "  - Directeur        : r.sana (Marketing Digital), service actif, tout assigné\n"
+            "  - Maître de stage  : M.Kader (Développement Web), encadre Mariam, proposition en\n"
             "                       attente de sa réponse pour Aliya (dashboard_tuteur)\n"
-            "  - Maître de stage  : F.Konate (Marketing Digital) — encadre Succes et Geoffroy (terminé)\n"
+            "  - Maître de stage  : F.Konate (Marketing Digital), encadre Succes et Geoffroy (terminé)\n"
             "  - Stagiaire        : mariam (dashboard complet, en cours, maître de stage assigné)\n"
             "  - Stagiaire        : succes (en cours, avancé, maître de stage assigné)\n"
-            "  - Stagiaire        : aliya (en cours, SANS maître de stage — proposition en attente\n"
+            "  - Stagiaire        : aliya (en cours, SANS maître de stage, proposition en attente\n"
             "                       de réponse de M.Kader ; le service RH n'a pas de directeur)\n"
-            "  - Stagiaire        : awa (en cours, service Réseaux SANS directeur ni maître de stage —\n"
+            "  - Stagiaire        : awa (en cours, service Réseaux SANS directeur ni maître de stage,\n"
             "                       cas 'personne à notifier automatiquement')\n"
             "  - Stagiaire        : geoffroy (stage terminé, évaluation finale, entretien de sortie)\n"
             "  - Fatou Traoré     : candidature acceptée à l'instant dans le service Développement Web\n"
-            "                       (avec directeur) — vérifiez la notification envoyée à b.compaore\n"
+            "                       (avec directeur), vérifiez la notification envoyée à b.compaore\n"
             "                       (console e-mail si aucun serveur SMTP configuré) ; pas de compte\n"
             "                       utilisable avant activation par e-mail.\n"
         ))

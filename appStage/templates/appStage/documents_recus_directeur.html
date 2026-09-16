@@ -51,6 +51,7 @@
           .then(function (html) {
             resultats.innerHTML = html;
             if (window.lucide) window.lucide.createIcons();
+            if (window.htmx) window.htmx.process(resultats);
             window.history.replaceState(null, '', url);
           })
           .catch(function () {})

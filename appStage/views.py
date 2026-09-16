@@ -23,7 +23,6 @@ from django.views.decorators.http import require_POST
 
 from .decorators import role_required
 from .forms import (
-    AccepterCandidatureForm,
     ActiverCompteForm,
     AffecterMaitreStageForm,
     AffecterServiceForm,
@@ -36,6 +35,8 @@ from .forms import (
     EnvoyerDocumentRHForm,
     EvaluationForm,
     ParametresForm,
+    PlanifierStageForm,
+    ProgrammerEntretienForm,
     RefuserCandidatureForm,
     SoumettreDocumentForm,
 )
@@ -127,7 +128,7 @@ class ConnexionView(LoginView):
 @never_cache
 def candidature_publique(request):
     """
-    Formulaire public de dépôt de candidature — remplace l'ancienne
+    Formulaire public de dépôt de candidature, remplace l'ancienne
     inscription libre. Ne nécessite aucun compte : le RH créera le
     compte automatiquement s'il accepte la candidature.
     """
@@ -333,7 +334,7 @@ def liste_stagiaires(request):
 
 @role_required(User.Role.RH)
 def exporter_stagiaires_csv(request):
-    """Export CSV de la liste Stagiaires — respecte la recherche/le filtre de statut en cours."""
+    """Export CSV de la liste Stagiaires, respecte la recherche/le filtre de statut en cours."""
     stages, _, _ = _stages_filtres(request)
     lignes = [
         [
@@ -359,7 +360,7 @@ def affecter_service(request):
     Page dédiée à l'affectation des stagiaires à un service. Depuis
     l'acceptation d'une candidature, le stage est créé sans service : c'est
     ici, et uniquement ici, que le RH lui en choisit un (première
-    affectation) ou en change (réaffectation) — ce qui redémarre le
+    affectation) ou en change (réaffectation), ce qui redémarre le
     processus d'encadrement : le maître de stage éventuel est désassigné et
     le nouveau directeur de service est notifié pour en choisir un.
     """
@@ -477,36 +478,24 @@ def exporter_candidatures_csv(request):
 @require_POST
 @role_required(User.Role.RH)
 def accepter_candidature(request, candidature_id):
+    """
+    Première étape de l'acceptation : programme un entretien et prévient le
+    candidat par email. La période de stage n'est plus demandée ici, elle
+    se renseigne ensuite sur la page Planification, une fois l'entretien
+    passé (voir planifier_stages).
+    """
     candidature = get_object_or_404(Candidature, pk=candidature_id, statut=Candidature.Statut.EN_ATTENTE)
-    form = AccepterCandidatureForm(request.POST)
+    form = ProgrammerEntretienForm(request.POST)
     if form.is_valid():
-        _, _, lien_activation = candidature.accepter(
+        candidature.programmer_entretien(
             traite_par=request.user.profil_rh,
-            date_debut=form.cleaned_data['date_debut'],
-            date_fin=form.cleaned_data['date_fin'],
+            date_entretien=form.cleaned_data['date_entretien'],
             avec_soutenance=form.cleaned_data['avec_soutenance'],
         )
-        if not settings.EMAIL_REELLEMENT_CONFIGURE:
-            # Filet de sécurité tant qu'aucun SMTP réel n'est configuré : le
-            # lien s'affiche directement dans l'UI, pas besoin de dépendre du
-            # terminal où tourne runserver pour voir l'email envoyé. Dès que
-            # EMAIL_HOST est défini, un vrai email part et ce filet disparaît.
-            #
-            # IMPORTANT : nom_complet vient d'un formulaire PUBLIC (saisie
-            # non fiable) — on l'échappe explicitement avant de l'insérer
-            # dans du HTML marqué safe, pour éviter toute injection XSS.
-            from django.utils.html import escape
-            nom_echappe = escape(candidature.nom_complet)
-            messages.success(
-                request,
-                mark_safe(
-                    f"Candidature de {nom_echappe} acceptée, compte créé. "
-                    f"<strong>Lien d'activation (aucun SMTP configuré pour l'instant)&nbsp;:</strong> "
-                    f"<a href=\"{lien_activation}\">{lien_activation}</a>"
-                ),
-            )
-        else:
-            messages.success(request, f"Candidature de {candidature.nom_complet} acceptée, email envoyé.")
+        messages.success(
+            request,
+            f"Candidature de {candidature.nom_complet} acceptée, entretien programmé et email envoyé.",
+        )
     else:
         messages.error(request, "Formulaire invalide : " + " ".join(
             f"{champ} : {', '.join(erreurs)}" for champ, erreurs in form.errors.items()
@@ -517,7 +506,10 @@ def accepter_candidature(request, candidature_id):
 @require_POST
 @role_required(User.Role.RH)
 def refuser_candidature(request, candidature_id):
-    candidature = get_object_or_404(Candidature, pk=candidature_id, statut=Candidature.Statut.EN_ATTENTE)
+    candidature = get_object_or_404(
+        Candidature, pk=candidature_id,
+        statut__in=[Candidature.Statut.EN_ATTENTE, Candidature.Statut.ENTRETIEN],
+    )
     form = RefuserCandidatureForm(request.POST)
     if form.is_valid():
         candidature.refuser(form.cleaned_data['motif'], request.user.profil_rh)
@@ -527,11 +519,63 @@ def refuser_candidature(request, candidature_id):
     return redirect('appStage:candidatures')
 
 
+@role_required(User.Role.RH)
+def planifier_stages(request):
+    """
+    Espace dédié du RH pour renseigner la période de stage des candidats
+    dont l'entretien a été programmé. C'est cette étape qui crée
+    effectivement le compte du stagiaire et son stage.
+    """
+    candidatures_qs = Candidature.objects.filter(statut=Candidature.Statut.ENTRETIEN) \
+        .order_by('date_entretien', '-date_soumission')
+    return render(request, 'appStage/planifier_stages.html', {
+        'candidatures': candidatures_qs,
+    })
+
+
+@require_POST
+@role_required(User.Role.RH)
+def finaliser_stage_candidature(request, candidature_id):
+    candidature = get_object_or_404(Candidature, pk=candidature_id, statut=Candidature.Statut.ENTRETIEN)
+    form = PlanifierStageForm(request.POST)
+    if form.is_valid():
+        _, _, lien_activation = candidature.finaliser_stage(
+            date_debut=form.cleaned_data['date_debut'],
+            date_fin=form.cleaned_data['date_fin'],
+        )
+        if not settings.EMAIL_REELLEMENT_CONFIGURE:
+            # Filet de sécurité tant qu'aucun SMTP réel n'est configuré : le
+            # lien s'affiche directement dans l'UI, pas besoin de dépendre du
+            # terminal où tourne runserver pour voir l'email envoyé. Dès que
+            # EMAIL_HOST est défini, un vrai email part et ce filet disparaît.
+            #
+            # IMPORTANT : nom_complet vient d'un formulaire PUBLIC (saisie
+            # non fiable), on l'échappe explicitement avant de l'insérer
+            # dans du HTML marqué safe, pour éviter toute injection XSS.
+            from django.utils.html import escape
+            nom_echappe = escape(candidature.nom_complet)
+            messages.success(
+                request,
+                mark_safe(
+                    f"Stage de {nom_echappe} confirmé, compte créé. "
+                    f"<strong>Lien d'activation (aucun SMTP configuré pour l'instant) :</strong> "
+                    f"<a href=\"{lien_activation}\">{lien_activation}</a>"
+                ),
+            )
+        else:
+            messages.success(request, f"Stage de {candidature.nom_complet} confirmé, email envoyé.")
+    else:
+        messages.error(request, "Formulaire invalide : " + " ".join(
+            f"{champ} : {', '.join(erreurs)}" for champ, erreurs in form.errors.items()
+        ))
+    return redirect('appStage:planifier_stages')
+
+
 @require_POST
 @role_required(User.Role.RH)
 def supprimer_candidature(request, candidature_id):
     """
-    Supprime définitivement une candidature déjà traitée (acceptée ou refusée) —
+    Supprime définitivement une candidature déjà traitée (acceptée ou refusée),
     utile pour nettoyer les doublons de test. Le compte stagiaire éventuellement
     créé lors de l'acceptation n'est PAS supprimé (le lien est simplement détaché).
     """
@@ -646,7 +690,7 @@ def documents_recus_rh(request):
         total_documents += len(recus)
         # "En attente de signature" ne doit compter que ce qui concerne le RH :
         # les documents qu'il a lui-même envoyés (conventions/contrats) et qui
-        # attendent la signature du stagiaire — pas les documents adressés au tuteur.
+        # attendent la signature du stagiaire, pas les documents adressés au tuteur.
         total_en_attente_signature += sum(
             1 for d in envoyes if d.statut_signature == DocumentStage.StatutSignature.EN_ATTENTE
         )
@@ -1006,8 +1050,8 @@ def evaluer(request, stage_id):
 def mes_affectations(request):
     """
     Page dédiée du maître de stage pour répondre aux propositions
-    d'encadrement (affectations de stagiaires) : c'est ici — et non plus
-    seulement dans le tableau de bord — qu'il accepte ou refuse, et c'est
+    d'encadrement (affectations de stagiaires) : c'est ici, et non plus
+    seulement dans le tableau de bord, qu'il accepte ou refuse, et c'est
     vers cette page que pointe désormais l'email reçu lors d'une nouvelle
     proposition.
     """
@@ -1105,7 +1149,7 @@ def signer_document(request, document_id):
     """
     Le destinataire réel d'un document (le stagiaire s'il lui est adressé,
     le tuteur si c'est lui) le marque comme signé. C'est la seule façon
-    pour l'app de savoir qu'un accord/contrat envoyé a bien été traité —
+    pour l'app de savoir qu'un accord/contrat envoyé a bien été traité,
     avant ça, "en attente de signature" ne changeait jamais tout seul.
     """
     doc = get_object_or_404(DocumentStage.objects.select_related('stage__stagiaire__user', 'stage__maitre_de_stage__user'), pk=document_id)

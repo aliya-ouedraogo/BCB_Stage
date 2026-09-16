@@ -114,10 +114,10 @@ class ProfilMaitreStage(models.Model):
         """
         Crée un compte tuteur (sans mot de passe utilisable) et lui envoie un
         email d'activation à usage unique, sur le même principe que
-        Candidature.accepter() pour les stagiaires. Tout est fait dans une
+        Candidature.finaliser_stage() pour les stagiaires. Tout est fait dans une
         seule transaction : en cas d'échec à n'importe quelle étape (compte
         déjà existant, erreur d'envoi d'e-mail...), rien n'est enregistré en
-        base — pas de compte orphelin sans profil, ni de profil sans compte.
+        base, pas de compte orphelin sans profil, ni de profil sans compte.
         """
         from django.db import transaction
 
@@ -204,7 +204,7 @@ class ProfilDirecteur(models.Model):
         """
         Crée un compte directeur (sans mot de passe utilisable), le rattache
         au département fourni, et lui envoie un email d'activation à usage
-        unique — même principe que ProfilMaitreStage.creer_et_inviter().
+        unique, même principe que ProfilMaitreStage.creer_et_inviter().
         """
         from django.db import transaction
 
@@ -292,12 +292,17 @@ class Departement(models.Model):
 class Candidature(models.Model):
     """
     Demande de stage soumise AVANT toute création de compte utilisateur.
-    Le RH la traite (accepte ou refuse) ; c'est cette action qui,
-    en cas d'acceptation, déclenche la création du User + ProfilStagiaire + Stage.
+    Le RH la traite en deux temps : d'abord l'acceptation, qui programme
+    un entretien et prévient le candidat par email (programmer_entretien) ;
+    puis, une fois l'entretien passé, la saisie de la période de stage
+    retenue, qui déclenche la création du User + ProfilStagiaire + Stage
+    (finaliser_stage). Un refus reste possible à tout moment avant cette
+    finalisation.
     """
 
     class Statut(models.TextChoices):
         EN_ATTENTE = 'EN_ATTENTE', 'En attente'
+        ENTRETIEN = 'ENTRETIEN', 'Entretien programmé'
         ACCEPTEE = 'ACCEPTEE', 'Acceptée'
         REFUSEE = 'REFUSEE', 'Refusée'
 
@@ -327,6 +332,10 @@ class Candidature(models.Model):
 
     statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
     motif_refus = models.TextField(blank=True, help_text="Obligatoire côté formulaire si la candidature est refusée.")
+    date_entretien = models.DateField(
+        null=True, blank=True,
+        help_text="Date à laquelle le candidat est convoqué pour l'entretien, renseignée à l'acceptation.",
+    )
 
     departement_affecte = models.ForeignKey(
         Departement, on_delete=models.SET_NULL, null=True, blank=True, related_name='candidatures'
@@ -358,13 +367,31 @@ class Candidature(models.Model):
         self.save()
         self._envoyer_email_refus()
 
-    def accepter(self, traite_par, date_debut, date_fin, avec_soutenance=True):
+    def programmer_entretien(self, traite_par, date_entretien, avec_soutenance=True):
         """
-        Accepte la candidature : crée le compte utilisateur (sans mot de
-        passe utilisable), son profil, le Stage correspondant (sans service
-        assigné pour l'instant — cela se fait ensuite sur la page
-        Affectation), puis envoie un email avec un lien d'activation à usage
-        unique permettant au stagiaire de définir lui-même son mot de passe.
+        Première étape de l'acceptation : le candidat est informé qu'il est
+        présélectionné et convoqué à un entretien, à la date choisie par le
+        RH. Le compte utilisateur et le stage ne sont créés qu'à la seconde
+        étape (voir finaliser_stage), une fois l'entretien passé et la
+        période de stage connue.
+        """
+        self.statut = self.Statut.ENTRETIEN
+        self.avec_soutenance_souhaite = avec_soutenance
+        self.date_entretien = date_entretien
+        self.traite_par = traite_par
+        self.date_traitement = timezone.now()
+        self.save()
+        self._envoyer_email_entretien()
+
+    def finaliser_stage(self, date_debut, date_fin):
+        """
+        Deuxième étape, une fois l'entretien passé : le RH renseigne la
+        période de stage retenue. C'est cette action qui crée le compte
+        utilisateur (sans mot de passe utilisable), son profil, le Stage
+        correspondant (sans service assigné pour l'instant, cela se fait
+        ensuite sur la page Affectation), puis envoie un email avec un lien
+        d'activation à usage unique permettant au stagiaire de définir
+        lui-même son mot de passe.
         """
         parties_nom = self.nom_complet.strip().split(' ', 1)
         user = User.objects.create_user(
@@ -387,21 +414,41 @@ class Candidature(models.Model):
             intitule_poste=self.poste_souhaite,
             date_debut=date_debut,
             date_fin=date_fin,
-            avec_soutenance=avec_soutenance,
+            avec_soutenance=self.avec_soutenance_souhaite,
             statut=Stage.Statut.A_VENIR,
         )
 
         self.statut = self.Statut.ACCEPTEE
-        self.traite_par = traite_par
         self.stagiaire_cree = profil
         self.date_traitement = timezone.now()
         self.save()
 
-        lien_activation = self._envoyer_email_activation(user)
+        lien_activation = self._envoyer_email_activation(user, date_debut)
 
         return user, stage, lien_activation
 
-    def _envoyer_email_activation(self, user):
+    def _envoyer_email_entretien(self):
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+
+        date_affichee = self.date_entretien.strftime('%d/%m/%Y') if self.date_entretien else 'à confirmer'
+        send_mail(
+            subject="Votre candidature a retenu notre attention - BCBStageFlow",
+            message=(
+                f"Bonjour {self.nom_complet},\n\n"
+                f"Votre candidature au poste de {self.poste_souhaite} a retenu notre attention.\n\n"
+                f"Il reste une étape avant la confirmation définitive de votre stage : un entretien, "
+                f"prévu le {date_affichee}.\n\n"
+                f"Merci de vous présenter à cette date. La période exacte de votre stage vous sera "
+                f"communiquée à l'issue de l'entretien, avec les instructions pour activer votre compte.\n\n"
+                f"L'équipe BCBStageFlow"
+            ),
+            from_email=dj_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[self.email],
+            fail_silently=False,
+        )
+
+    def _envoyer_email_activation(self, user, date_debut):
         from django.contrib.auth.tokens import default_token_generator
         from django.core.mail import send_mail
         from django.conf import settings as dj_settings
@@ -413,12 +460,14 @@ class Candidature(models.Model):
         token = default_token_generator.make_token(user)
         lien_relatif = reverse('appStage:activer_compte', kwargs={'uidb64': uidb64, 'token': token})
         lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
+        date_debut_affichee = date_debut.strftime('%d/%m/%Y')
 
         send_mail(
-            subject="Votre candidature a été acceptée - BCBStageFlow",
+            subject="Votre stage est confirmé - BCBStageFlow",
             message=(
                 f"Bonjour {self.nom_complet},\n\n"
-                f"Votre candidature au poste de {self.poste_souhaite} a été acceptée !\n\n"
+                f"Suite à votre entretien, votre stage au poste de {self.poste_souhaite} est confirmé, "
+                f"avec une prise de poste prévue le {date_debut_affichee}.\n\n"
                 f"Pour accéder à votre tableau de bord, définissez votre mot de passe "
                 f"en suivant ce lien (valable 48 heures) :\n{lien_complet}\n\n"
                 f"L'équipe BCBStageFlow"
@@ -556,7 +605,7 @@ class Stage(models.Model):
         À appeler seulement après synchroniser_presences(). Ne compte QUE les
         jours confirmés par le tuteur (valide_par_tuteur=True) : sans ça, un
         stagiaire pourrait afficher un taux flatteur simplement en pointant
-        sans jamais se faire réellement valider — ce qui viderait de son
+        sans jamais se faire réellement valider, ce qui viderait de son
         sens tout le système de confirmation.
         """
         confirmees = self.presences.filter(valide_par_tuteur=True)
@@ -569,7 +618,7 @@ class Stage(models.Model):
     def synchroniser_presences(self):
         """
         Crée une Presence 'absente' pour chaque jour ouvré déjà écoulé
-        (jusqu'à hier — délai de grâce jusqu'à minuit pour pointer) sans
+        (jusqu'à hier, délai de grâce jusqu'à minuit pour pointer) sans
         aucun enregistrement. À appeler avant toute lecture de taux_presence
         ou de la liste des présences, pour que les jours ignorés comptent
         vraiment comme des absences plutôt que d'être simplement absents
@@ -620,7 +669,7 @@ class Stage(models.Model):
         """
         Prévient par email (et via une Notification in-app) le stagiaire et
         le directeur du département auquel il vient d'être affecté par le
-        RH — le stagiaire pour information, le directeur pour qu'il choisisse
+        RH, le stagiaire pour information, le directeur pour qu'il choisisse
         à son tour un maître de stage. N'empêche jamais l'affectation
         elle-même si l'un des envois échoue (fail_silently).
         """
@@ -869,7 +918,7 @@ class Evaluation(models.Model):
     class Meta:
         # date_evaluation n'a qu'une précision journalière : sans le tri
         # secondaire sur id, deux évaluations créées le même jour peuvent
-        # apparaître dans un ordre non garanti — et donc afficher la
+        # apparaître dans un ordre non garanti, et donc afficher la
         # mauvaise comme "dernière évaluation" au stagiaire.
         ordering = ['-date_evaluation', '-id']
 
@@ -1085,7 +1134,7 @@ class Notification(models.Model):
     """
     Notification in-app minimale, affichée dans la cloche du tableau de
     bord. Vient en complément des emails (canal principal) envoyés par les
-    méthodes métier ci-dessus — jamais en remplacement.
+    méthodes métier ci-dessus, jamais en remplacement.
     """
 
     destinataire = models.ForeignKey(

@@ -1,5 +1,5 @@
 /* =========================================================
-   BCBStageFlow — Shell commun aux tableaux de bord
+   BCBStageFlow, Shell commun aux tableaux de bord
    (Sidebar + Topbar + composants partagés : stat-cards,
    listes de stagiaires, cartes CTA sombres, etc.)
    ========================================================= */
@@ -8,6 +8,7 @@
   display: flex;
   min-height: 100vh;
   background: var(--color-bg);
+  overflow-x: hidden;
 }
 
 /* ---------------------------------------------------------
@@ -30,7 +31,6 @@
 .sidebar-top { display: flex; flex-direction: column; gap: 36px; }
 
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 4px; }
-
 .brand-icon {
   width: 36px;
   height: 36px;
@@ -99,6 +99,53 @@
 }
 .sidebar-footer-link [data-lucide] { width: 17px; height: 17px; }
 .sidebar-footer-link:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+
+.sidebar-close-btn {
+  display: none;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sidebar-close-btn [data-lucide] { width: 16px; height: 16px; }
+
+/* ---------------------------------------------------------
+   Menu burger mobile : sous 860px, la sidebar devient un tiroir
+   coulissant ouvert/fermé par ce bouton (remplace l'ancienne
+   barre de navigation du bas).
+   --------------------------------------------------------- */
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hamburger-btn [data-lucide] { width: 20px; height: 20px; }
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 16, 0.55);
+  z-index: 290;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.sidebar-backdrop.visible { display: block; opacity: 1; }
 
 /* ---------------------------------------------------------
    Zone principale + Topbar
@@ -229,7 +276,7 @@
    Bouton "Retour" (pages de détail)
    Note : .dashboard-content est un flex column, donc tout enfant
    direct s'étire en pleine largeur (align-items: stretch) sauf
-   s'il définit son propre align-self — d'où .btn-back ci-dessous.
+   s'il définit son propre align-self, d'où .btn-back ci-dessous.
    --------------------------------------------------------- */
 .btn-back {
   align-self: flex-start;
@@ -277,7 +324,7 @@
 .section-head .link-arrow [data-lucide] { width: 15px; height: 15px; }
 
 /* ---------------------------------------------------------
-   Stat cards (RH — Vue d'ensemble)
+   Stat cards (RH, Vue d'ensemble)
    --------------------------------------------------------- */
 .stat-grid {
   display: grid;
@@ -345,7 +392,7 @@
 .stat-card--peach .stat-icon { color: var(--color-warning); }
 
 /* ---------------------------------------------------------
-   Graphique en anneau (répartition des stagiaires) — tableaux
+   Graphique en anneau (répartition des stagiaires), tableaux
    de bord tuteur et directeur.
    --------------------------------------------------------- */
 .stat-donut-row {
@@ -644,7 +691,7 @@ a.todo-item:hover { background: var(--color-bg); }
 }
 
 /* ---------------------------------------------------------
-   Espace Maître de stage — cartes stagiaires + suivi
+   Espace Maître de stage, cartes stagiaires + suivi
    --------------------------------------------------------- */
 .intern-grid {
   display: grid;
@@ -977,9 +1024,68 @@ a.todo-item:hover { background: var(--color-bg); }
 .cta-banner-arrow { width: 18px; height: 18px; flex-shrink: 0; color: #b7b8c4; }
 
 /* ---------------------------------------------------------
-   Messages système (succès / erreur)
+   Messages système (succès / erreur) : toasts flottants,
+   au-dessus du contenu, jamais dans le flux de la page.
    --------------------------------------------------------- */
-.messages-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.toast-stack {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+}
+.app-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: var(--shadow-lg);
+  animation: toast-entree 200ms ease-out;
+}
+.app-toast a { color: inherit; text-decoration: underline; font-weight: 600; }
+.app-toast-text { flex: 1; }
+.app-toast-close {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.app-toast-close:hover { opacity: 1; }
+.app-toast-close [data-lucide] { width: 14px; height: 14px; }
+.app-toast--success { background: var(--color-primary-soft); color: var(--color-primary); }
+.app-toast--error { background: var(--color-danger-bg); color: var(--color-danger); }
+.app-toast--info { background: var(--color-primary-soft); color: var(--color-primary); }
+.app-toast--warning { background: var(--color-warning-bg); color: #92400e; }
+
+@keyframes toast-entree {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 640px) {
+  .toast-stack { top: auto; bottom: 84px; right: 12px; left: 12px; width: auto; }
+}
+
+/* ---------------------------------------------------------
+   Bandeaux d'information inline (pas des toasts) : utilisés
+   directement dans le contenu des pages pour un état persistant
+   lié au contexte ("stage à venir", "pas encore de maître de
+   stage"...), à ne pas confondre avec .app-toast ci-dessus qui
+   sert uniquement aux messages Django (succès/erreur transitoires).
+   --------------------------------------------------------- */
 .app-message {
   padding: 12px 16px;
   border-radius: var(--radius-md);
@@ -1014,52 +1120,23 @@ a.todo-item:hover { background: var(--color-bg); }
 .icon-btn.is-disabled:hover { background: var(--color-surface); }
 
 /* ---------------------------------------------------------
-   Barre de navigation mobile (remplace la sidebar sous 860px)
+   Tiroir mobile (sidebar en position fixe, coulissante, sous
+   860px), et repli du menu burger vers le contenu.
    --------------------------------------------------------- */
-.bottom-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 40;
-  background: var(--color-ink);
-  border-top: 1px solid var(--color-ink-border);
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-  justify-content: space-around;
-  align-items: stretch;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.bottom-nav-item {
-  flex: 1;
-  min-width: 62px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 6px 2px;
-  border-radius: var(--radius-sm);
-  color: #82829a;
-  font-size: 10.5px;
-  font-weight: 600;
-  text-align: center;
-  white-space: nowrap;
-}
-.bottom-nav-item [data-lucide] { width: 20px; height: 20px; }
-.bottom-nav-item.active { color: #fff; }
-.bottom-nav-item.active [data-lucide] { color: var(--color-primary-light, #8b7bff); }
+@media (max-width: 860px) {
+  .hamburger-btn { display: flex; }
+  .sidebar-close-btn { display: flex; }
 
-/* Avec beaucoup d'entrées (ex. rôle RH : 9 items), un partage égal de la
-   largeur de l'écran écraserait chaque icône/libellé. Au-delà de 5 items,
-   on bascule sur une largeur fixe et lisible par item, avec défilement
-   horizontal, plutôt que de tout comprimer pour que ça tienne. */
-.bottom-nav:has(.bottom-nav-item:nth-child(6)) {
-  justify-content: flex-start;
-}
-.bottom-nav:has(.bottom-nav-item:nth-child(6)) .bottom-nav-item {
-  flex: 0 0 auto;
-  width: 74px;
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 300;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.mobile-open { transform: translateX(0); }
 }
 
 /* ---------------------------------------------------------
@@ -1354,7 +1431,7 @@ a.todo-item:hover { background: var(--color-bg); }
 .doc-chip [data-lucide] { width: 13px; height: 13px; }
 .doc-chip-empty { font-size: 12.5px; color: var(--color-text-faint); }
 
-/* Section "Documents du candidat" — volontairement plus visible que de
+/* Section "Documents du candidat", volontairement plus visible que de
    simples chips, pour inciter le RH à ouvrir les pièces jointes avant de
    se prononcer sur la candidature. */
 .candidature-docs {
@@ -1433,9 +1510,13 @@ a.todo-item:hover { background: var(--color-bg); }
 .form-group { display: flex; flex-direction: column; gap: 7px; }
 .form-group label { font-size: 13px; font-weight: 600; color: var(--color-text); }
 
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
 .form-group input,
 .form-group select,
 .form-group textarea {
+  width: 100%;
+  max-width: 100%;
   padding: 0 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -1618,6 +1699,7 @@ a.todo-item:hover { background: var(--color-bg); }
 .settings-avatar-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 20px;
   padding-bottom: 22px;
   margin-bottom: 22px;
@@ -1695,12 +1777,8 @@ a.todo-item:hover { background: var(--color-bg); }
   .info-grid { grid-template-columns: 1fr; }
 }
 
-/* En dessous de 860px : la sidebar disparaît, remplacée par la barre basse */
+/* En dessous de 860px : la sidebar devient le tiroir mobile (voir plus haut) */
 @media (max-width: 860px) {
-  .sidebar { display: none; }
-  .bottom-nav { display: flex; }
-  .dashboard-body { padding-bottom: 66px; } /* place pour la barre basse */
-
   .topbar { padding: 20px 20px 16px; }
   .topbar-heading h1 { font-size: 24px; }
   .dashboard-content { padding: 0 20px 30px; }
@@ -1714,7 +1792,9 @@ a.todo-item:hover { background: var(--color-bg); }
   .candidature-form-row { grid-template-columns: 1fr; }
 
   .settings-layout { grid-template-columns: 1fr; }
-  .settings-tabs { flex-direction: row; overflow-x: auto; position: static; }
+  .settings-tabs { flex-direction: row; flex-wrap: wrap; overflow-x: visible; position: static; }
+  .settings-tab { flex: 1 1 calc(50% - 2px); justify-content: center; white-space: nowrap; }
+  .form-row { grid-template-columns: 1fr; }
 
   /* Lignes "personne" (stagiaires, tuteurs, directeurs, affectation...) :
      avatar + nom restent groupés sur la première ligne, le reste (dates,

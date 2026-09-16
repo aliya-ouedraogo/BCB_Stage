@@ -1,5 +1,5 @@
 /* =========================================================
-   BCBStageFlow — Page Onboarding (connexion / inscription)
+   BCBStageFlow, Page Onboarding (connexion / inscription)
    ========================================================= */
 
 .auth-page {
@@ -306,7 +306,7 @@
 .auth-card--form .auth-brand { color: var(--color-text); margin-bottom: 28px; }
 
 /* ---------- Variante "message" : pages à un seul panneau
-   (confirmation, erreur) — pas de showcase, carte resserrée ---------- */
+   (confirmation, erreur), pas de showcase, carte resserrée ---------- */
 .auth-card--message {
   grid-template-columns: 1fr;
   max-width: 440px;

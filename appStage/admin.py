@@ -33,10 +33,10 @@ class CustomUserAdmin(UserAdmin):
 class ProfilAutoCreeAdmin(admin.ModelAdmin):
     """
     Base pour les profils créés automatiquement (signal post_save pour
-    RH/Maître de Stage, ou Candidature.accepter() pour Stagiaire).
+    RH/Maître de Stage, ou Candidature.finaliser_stage() pour Stagiaire).
     On retire le bouton "Ajouter" : en créer un manuellement ici entre
     en conflit avec celui déjà créé automatiquement pour le même
-    utilisateur (contrainte unique sur user_id) — c'est exactement le
+    utilisateur (contrainte unique sur user_id), c'est exactement le
     bug "Duplicata du champ ... pour la clef user_id" que ce garde-fou
     empêche désormais.
     """

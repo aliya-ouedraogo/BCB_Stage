@@ -1,5 +1,5 @@
 /* =========================================================
-   BCBStageFlow — Base / reset / utilitaires communs
+   BCBStageFlow, Base / reset / utilitaires communs
    ========================================================= */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -21,7 +21,7 @@ body {
   to { opacity: 1; }
 }
 
-/* Icône de chargement (loader-2) — utilisée sur les boutons en cours de
+/* Icône de chargement (loader-2), utilisée sur les boutons en cours de
    soumission (création de compte, envoi de candidature, etc.). */
 @keyframes rotation-chargement {
   from { transform: rotate(0deg); }
@@ -30,7 +30,7 @@ body {
 [data-lucide="loader-2"] { animation: rotation-chargement 0.8s linear infinite; }
 
 /* Transition douce lors des navigations htmx (remplace le rechargement
-   complet de page — voir base_dashboard.html) : le contenu qui sort
+   complet de page, voir base_dashboard.html) : le contenu qui sort
    s'estompe, celui qui arrive apparaît en fondu, la sidebar ne bouge pas. */
 .htmx-swapping { opacity: 0; transition: opacity 120ms ease-out; }
 .htmx-settling { opacity: 0; }

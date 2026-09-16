@@ -2,7 +2,7 @@ def nav_items(request):
     """
     Fournit la liste des liens de navigation adaptés au rôle de l'utilisateur
     connecté. Utilisé à la fois par la sidebar desktop et la barre de
-    navigation mobile dans base_dashboard.html — une seule source de vérité,
+    navigation mobile dans base_dashboard.html, une seule source de vérité,
     donc impossible d'avoir des liens différents/incohérents selon la page.
     """
     if not request.user.is_authenticated or not getattr(request.user, 'role', None):
@@ -32,6 +32,7 @@ def nav_items(request):
         'RH': [
             {'label': 'Tableau de bord', 'icon': 'layout-dashboard', 'url_name': 'appStage:dashboard_rh'},
             {'label': 'Candidatures', 'icon': 'user-plus', 'url_name': 'appStage:candidatures', 'badge': _nb_candidatures_en_attente()},
+            {'label': 'Entretiens', 'icon': 'calendar-clock', 'url_name': 'appStage:planifier_stages', 'badge': _nb_candidatures_en_entretien()},
             {'label': 'Stagiaires', 'icon': 'users', 'url_name': 'appStage:liste_stagiaires'},
             {'label': 'Affectation', 'icon': 'building-2', 'url_name': 'appStage:affecter_service', 'badge': _nb_stagiaires_a_affecter()},
             {'label': 'Maîtres de Stage', 'icon': 'user-check', 'url_name': 'appStage:gestion_tuteurs'},
@@ -51,6 +52,12 @@ def _nb_candidatures_en_attente():
     """Nombre de candidatures pas encore traitées, pour le badge de la sidebar RH."""
     from .models import Candidature
     return Candidature.objects.filter(statut=Candidature.Statut.EN_ATTENTE).count()
+
+
+def _nb_candidatures_en_entretien():
+    """Nombre de candidats dont l'entretien est programmé et la période de stage reste à renseigner, pour le badge Entretiens."""
+    from .models import Candidature
+    return Candidature.objects.filter(statut=Candidature.Statut.ENTRETIEN).count()
 
 
 def _nb_stagiaires_a_affecter():

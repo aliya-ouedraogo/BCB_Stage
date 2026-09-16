@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if connection.vendor != 'mysql':
             self.stdout.write(self.style.WARNING(
-                "Base de données actuelle : " + connection.vendor + " (pas MySQL) — rien à faire."
+                "Base de données actuelle : " + connection.vendor + " (pas MySQL), rien à faire."
             ))
             return
 
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             tables = [row[0] for row in cursor.fetchall()]
 
             if not tables:
-                self.stdout.write(self.style.SUCCESS("Aucune table MyISAM trouvée — tout est déjà en InnoDB."))
+                self.stdout.write(self.style.SUCCESS("Aucune table MyISAM trouvée, tout est déjà en InnoDB."))
                 return
 
             self.stdout.write(f"{len(tables)} table(s) en MyISAM à convertir :")

@@ -13,7 +13,7 @@ def role_required(*roles_autorises):
 
     Ajoute aussi never_cache : sans ça, un navigateur peut réafficher une
     page protégée depuis son cache après déconnexion (bouton retour, etc.)
-    sans repasser par le serveur — ce qui donnait l'impression qu'on
+    sans repasser par le serveur, ce qui donnait l'impression qu'on
     restait connecté alors que la session était bien terminée.
 
     Utilisation :

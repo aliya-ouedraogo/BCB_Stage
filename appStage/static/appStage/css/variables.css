@@ -1,5 +1,5 @@
 /* =========================================================
-   BCBStageFlow — Design tokens
+   BCBStageFlow, Design tokens
    Palette extraite des maquettes fournies : sidebar/panneaux
    quasi-noirs, accent indigo, cartes blanches, badges pastel.
    ========================================================= */
@@ -7,11 +7,11 @@
 :root {
   /* --- Couleurs de marque --- */
   --color-ink: #0b0b12;              /* sidebar / panneaux sombres */
-  --color-ink-hover: #050508;        /* survol des boutons noirs — plus foncé, jamais #000 pur */
+  --color-ink-hover: #050508;        /* survol des boutons noirs, plus foncé, jamais #000 pur */
   --color-ink-elevated: #16161f;     /* cartes sur fond sombre */
   --color-ink-border: #2a2a35;
 
-  --color-primary: #6d5ef8;          /* indigo — actions principales, liens */
+  --color-primary: #6d5ef8;          /* indigo, actions principales, liens */
   --color-primary-hover: #5a4bef;
   --color-primary-soft: #eeecff;
 

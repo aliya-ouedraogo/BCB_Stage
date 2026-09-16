@@ -8,8 +8,8 @@
 {% block content %}
 <div class="dashboard-body">
 
-  <!-- ============== Sidebar (desktop) — fixe, jamais remplacée par htmx ============== -->
-  <aside class="sidebar">
+  <!-- ============== Sidebar (desktop fixe, tiroir coulissant sur mobile) ============== -->
+  <aside class="sidebar" id="sidebar-mobile">
     <div class="sidebar-top">
       <div class="brand">
         <span class="brand-icon"><img src="{% static 'appStage/img/logo-bcb.png' %}" alt="BCB" class="brand-logo-img"></span>
@@ -17,6 +17,9 @@
           <span class="brand-name">BCBStageFlow</span>
           <span class="brand-sub">Management Portal</span>
         </div>
+        <button type="button" class="sidebar-close-btn" id="btn-fermer-menu" aria-label="Fermer le menu">
+          <i data-lucide="x"></i>
+        </button>
       </div>
 
       <nav class="sidebar-nav" hx-boost="true" hx-target="#contenu-page" hx-select="#contenu-page" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
@@ -33,13 +36,32 @@
     </div>
   </aside>
 
+  <!-- Fond assombri derrière le tiroir mobile, ferme le menu au clic. -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
   <!-- ============== Zone qui change à chaque navigation (htmx) ============== -->
-  <div id="contenu-page">
+  <!--
+    hx-target/hx-select/hx-swap/hx-push-url posés ici (et pas seulement sur
+    la nav) : tout <form> ou <a> boosté à l'intérieur, y compris ceux des
+    pages comme "Affectation", hérite de ce ciblage par défaut. Résultat :
+    la validation d'un formulaire ne remplace plus que cette zone (la
+    sidebar reste fixe) avec le fondu de 150ms déjà défini pour
+    #contenu-page dans base.css, au lieu de recharger tout le <body> d'un
+    coup (comportement par défaut de hx-boost="true" posé sur <body>), ce
+    qui donnait cette impression de page qui "saute" à l'apparition des
+    messages de confirmation. Un lien ou formulaire qui doit échapper à ce
+    comportement (export CSV, déconnexion...) le fait déjà explicitement
+    via hx-boost="false".
+  -->
+  <div id="contenu-page" hx-target="#contenu-page" hx-select="#contenu-page" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
     <!-- Le CSS propre a chaque page est injecte ICI (a l'interieur de la zone remplacee par htmx), jamais dans <head> qui n'est lui jamais retouche par un swap htmx. -->
     {% block page_css %}{% endblock %}
 
     <div class="dashboard-main">
       <header class="topbar">
+        <button type="button" class="hamburger-btn" id="btn-ouvrir-menu" aria-label="Ouvrir le menu">
+          <i data-lucide="menu"></i>
+        </button>
         <div class="topbar-heading">
           {% block page_eyebrow %}{% endblock %}
           <h1>{% block page_title %}{% endblock %}</h1>
@@ -62,55 +84,89 @@
       </header>
 
       <main class="dashboard-content">
-        {% if messages %}
-          <div class="messages-list">
-            {% for message in messages %}
-              <div class="app-message app-message--{{ message.tags|default:'info' }}">
-                {{ message }}
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
         {% block dashboard_content %}{% endblock %}
       </main>
     </div>
+
+    {% if messages %}
+      <div class="toast-stack" id="toast-stack">
+        {% for message in messages %}
+          <div class="app-toast app-toast--{{ message.tags|default:'info' }}">
+            <span class="app-toast-text">{{ message }}</span>
+            <button type="button" class="app-toast-close" onclick="this.closest('.app-toast').remove()" aria-label="Fermer">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
 
     <script>
       document.querySelectorAll('[data-progression]').forEach(function (el) {
         var bar = el.querySelector('span');
         if (bar) bar.style.width = el.dataset.progression + '%';
       });
+
+      // Messages de confirmation/alerte : ils flottent au-dessus de la page
+      // (voir .toast-stack) au lieu de s'empiler dans le flux normal, donc
+      // ils ne poussent jamais le contenu et ne s'accumulent pas à l'écran.
+      // Disparition automatique après quelques secondes, avec un léger
+      // décalage entre chacun s'il y en a plusieurs en même temps.
+      document.querySelectorAll('.app-toast').forEach(function (toast, index) {
+        setTimeout(function () {
+          toast.style.transition = 'opacity 200ms ease, transform 200ms ease';
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(16px)';
+          setTimeout(function () { toast.remove(); }, 200);
+        }, 5000 + index * 300);
+      });
     </script>
     {% block page_js %}{% endblock %}
   </div>
 
 </div>
-
-<!-- ============== Barre de navigation mobile — fixe elle aussi ============== -->
-<nav class="bottom-nav" hx-boost="true" hx-target="#contenu-page" hx-select="#contenu-page" hx-swap="outerHTML swap:120ms settle:120ms" hx-push-url="true">
-  {% for item in nav_items %}
-    <a href="{% url item.url_name %}"
-       class="bottom-nav-item{% if request.resolver_match.view_name == item.url_name %} active{% endif %}" style="position:relative;">
-      <i data-lucide="{{ item.icon }}"></i>
-      <span>{{ item.label }}</span>
-      {% if item.badge %}
-        <span style="position:absolute; top:2px; right:14px; min-width:16px; height:16px; border-radius:8px; font-size:10px; font-weight:700; padding:0 4px; display:inline-flex; align-items:center; justify-content:center; background:var(--color-danger); color:#fff;">{{ item.badge }}</span>
-      {% endif %}
-    </a>
-  {% endfor %}
-</nav>
 {% endblock %}
 
 {% block extra_js %}
   <script>
-    // La sidebar/nav mobile ne sont jamais remplacées par htmx (voir hx-select
-    // plus haut) : après chaque navigation, on met nous-mêmes à jour la classe
-    // "active" en comparant l'URL courante à chaque lien, et on regénère les
-    // icônes lucide qui viennent d'arriver dans le nouveau contenu.
+    // Menu burger mobile : la sidebar devient un tiroir coulissant sous
+    // 860px (voir dashboard.css) au lieu de l'ancienne barre du bas, qui
+    // s'étirait trop avec beaucoup d'entrées (rôle RH notamment) et cassait
+    // la mise en page de certaines pages comme Paramètres.
+    var sidebarMobile = document.getElementById('sidebar-mobile');
+    var fondMobile = document.getElementById('sidebar-backdrop');
+
+    function ouvrirMenuMobile() {
+      sidebarMobile.classList.add('mobile-open');
+      fondMobile.classList.add('visible');
+    }
+    function fermerMenuMobile() {
+      sidebarMobile.classList.remove('mobile-open');
+      fondMobile.classList.remove('visible');
+    }
+
+    // Délégation sur document.body plutôt qu'un addEventListener direct sur
+    // le bouton : #btn-ouvrir-menu vit dans la topbar, donc à l'intérieur de
+    // #contenu-page, qui est remplacé par htmx à chaque navigation. Un
+    // listener posé directement dessus au chargement initial se retrouvait
+    // accroché à un bouton qui n'existait plus après la première navigation,
+    // d'où le besoin de recharger la page pour que le menu remarche. La
+    // délégation, elle, revérifie la cible à chaque clic donc reste valable
+    // même quand le bouton a été remplacé.
+    document.body.addEventListener('click', function (evenement) {
+      if (evenement.target.closest('#btn-ouvrir-menu')) ouvrirMenuMobile();
+      if (evenement.target.closest('#btn-fermer-menu')) fermerMenuMobile();
+      if (evenement.target === fondMobile) fermerMenuMobile();
+      if (evenement.target.closest('.sidebar .nav-item')) fermerMenuMobile();
+    });
+
+    // La sidebar n'est jamais remplacée par htmx (voir hx-select plus haut) :
+    // après chaque navigation, on met nous-mêmes à jour la classe "active"
+    // en comparant l'URL courante à chaque lien, et on regénère les icônes
+    // lucide qui viennent d'arriver dans le nouveau contenu.
     document.body.addEventListener('htmx:afterSettle', function () {
       var chemin = window.location.pathname;
-      document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(function (lien) {
+      document.querySelectorAll('.nav-item').forEach(function (lien) {
         lien.classList.toggle('active', lien.getAttribute('href') === chemin);
       });
       if (window.lucide) window.lucide.createIcons();

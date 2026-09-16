@@ -61,6 +61,7 @@
           .then(function (html) {
             resultats.innerHTML = html;
             if (window.lucide) window.lucide.createIcons();
+            if (window.htmx) window.htmx.process(resultats);
             // Met à jour l'URL affichée sans recharger la page, pour que le
             // lien reste partageable / conservé au rafraîchissement (F5).
             window.history.replaceState(null, '', url);

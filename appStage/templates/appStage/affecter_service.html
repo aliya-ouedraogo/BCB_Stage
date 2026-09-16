@@ -43,6 +43,7 @@
           .then(function (html) {
             resultats.innerHTML = html;
             if (window.lucide) window.lucide.createIcons();
+            if (window.htmx) window.htmx.process(resultats);
             window.history.replaceState(null, '', url);
           })
           .catch(function () {})
@@ -64,7 +65,7 @@
       });
 
       // Le bouton "Enregistrer" d'une ligne ne s'active que si le service
-      // sélectionné diffère réellement du service actuel du stagiaire —
+      // sélectionné diffère réellement du service actuel du stagiaire,
       // impossible de cliquer "pour rien".
       resultats.addEventListener('change', function (evenement) {
         var select = evenement.target.closest('.champ-departement');

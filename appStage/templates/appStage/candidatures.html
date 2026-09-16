@@ -42,7 +42,7 @@
 
             <div class="candidature-docs">
               <div class="candidature-docs-title">
-                <i data-lucide="folder-open"></i> Documents du candidat — à consulter avant de statuer
+                <i data-lucide="folder-open"></i> Documents du candidat, à consulter avant de statuer
               </div>
               <div class="candidature-docs-grid">
                 {% if c.cv %}
@@ -103,6 +103,8 @@
               </button>
             </form>
           </div>
+        {% elif c.statut == 'ENTRETIEN' %}
+          <span class="badge badge-info">Entretien programmé</span>
         {% else %}
           <div style="display:flex; gap:8px; align-items:center;">
             <span class="badge badge-warning">Refusée</span>
@@ -126,17 +128,14 @@
           <form method="post" action="{% url 'appStage:accepter_candidature' c.id %}" class="form-avec-chargement">
             {% csrf_token %}
             <p style="font-size:12.5px; color:var(--color-text-muted); margin:0;">
-              Le service ne se choisit pas ici : une fois le compte créé, affectez-le depuis
-              la page <strong>Affectation</strong>.
+              Le candidat sera prévenu par email qu'il est présélectionné et convoqué à cet entretien.
+              La période de stage se renseigne ensuite, une fois l'entretien passé, depuis la page
+              <strong>Planification</strong>.
             </p>
             <div class="candidature-form-row">
               <div class="form-group">
-                <label>Date de début</label>
-                <input type="date" name="date_debut" required>
-              </div>
-              <div class="form-group">
-                <label>Date de fin</label>
-                <input type="date" name="date_fin" required>
+                <label>Date de l'entretien</label>
+                <input type="date" name="date_entretien" required>
               </div>
               <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Confirmation…">Confirmer</button>
             </div>
@@ -156,6 +155,14 @@
             </div>
             <button type="submit" class="btn btn-outline btn-sm" style="margin-top:8px;" data-loading-text="Envoi…">Confirmer le refus</button>
           </form>
+        </div>
+      {% elif c.statut == 'ENTRETIEN' %}
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="badge badge-info">
+            <i data-lucide="calendar-clock" style="width:12px;height:12px;"></i>
+            Entretien le {{ c.date_entretien|date:"d/m/Y" }}
+          </span>
+          <a href="{% url 'appStage:planifier_stages' %}" class="btn btn-outline btn-sm">Renseigner la période de stage</a>
         </div>
       {% endif %}
     </div>

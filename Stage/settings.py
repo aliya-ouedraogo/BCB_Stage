@@ -107,7 +107,7 @@ if os.environ.get('MYSQL_DATABASE'):
         'OPTIONS': {
             'charset': 'utf8mb4',
             # Le moteur par défaut du serveur MySQL peut être MyISAM (courant sur
-            # certaines installations Windows/XAMPP) — or MyISAM ignore silencieusement
+            # certaines installations Windows/XAMPP), or MyISAM ignore silencieusement
             # les transactions Django (pas de vrai rollback), ce qui peut laisser des
             # comptes à moitié créés en cas d'échec. On force InnoDB pour toute
             # nouvelle table créée par cette connexion, quel que soit le réglage
