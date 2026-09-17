@@ -113,7 +113,10 @@ if os.environ.get('MYSQL_DATABASE'):
             # comptes à moitié créés en cas d'échec. On force InnoDB pour toute
             # nouvelle table créée par cette connexion, quel que soit le réglage
             # global du serveur.
-            'init_command': "SET default_storage_engine=INNODB",
+            # STRICT_TRANS_TABLES : au lieu de tronquer/ignorer silencieusement une
+            # valeur invalide (ex. chaîne trop longue pour un champ), MySQL renvoie
+            # une vraie erreur — recommandé par Django (warning mysql.W002).
+            'init_command': "SET default_storage_engine=INNODB, sql_mode='STRICT_TRANS_TABLES'",
         },
     }
 
