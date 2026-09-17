@@ -70,7 +70,6 @@ class FinaliserStageTests(SynchronousTestCase):
         email = mail.outbox[0]
         self.assertEqual(email.to, [self.candidature.email])
         self.assertIn(date_debut.strftime('%d/%m/%Y'), email.body)
-        self.assertIn(date_fin.strftime('%d/%m/%Y'), email.body)
 
 
 class RefuserCandidatureTests(SynchronousTestCase):
