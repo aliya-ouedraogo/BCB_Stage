@@ -41,7 +41,7 @@ class RoleRequiredTests(SynchronousTestCase):
         reponse = client.get(self.url_dashboard_rh)
         self.assertEqual(reponse.status_code, 200)
 
-    def test_directeur_sans_departement_est_redirige_sans_planter(self):
+    def test_directeur_sans_departement_affiche_un_etat_vide_sans_planter(self):
         """
         Un directeur pas encore rattaché à un département ne doit jamais
         déclencher d'erreur serveur (AttributeError sur None), juste un

@@ -63,23 +63,27 @@ class SynchronousTestCase(TestCase):
 # ---------------------------------------------------------------------
 
 def creer_rh(username='rh1', **kwargs):
-    from appStage.models import ProfilRH, User
+    from appStage.models import User
     user = User.objects.create_user(
         username=username, email=f'{username}@bcbstageflow.test',
         password='motdepasse123', role=User.Role.RH,
         first_name='Rita', last_name='Hériaux', **kwargs,
     )
-    return ProfilRH.objects.create(user=user)
+    # Le profil est déjà créé automatiquement par le signal post_save
+    # (voir appStage/signals.py) dès que le User est sauvegardé avec ce
+    # rôle : le récupérer plutôt que le recréer évite un doublon (erreur
+    # d'intégrité sur la contrainte unique du OneToOneField).
+    return user.profil_rh
 
 
 def creer_directeur(username='directeur1', departement=None, **kwargs):
-    from appStage.models import ProfilDirecteur, User
+    from appStage.models import User
     user = User.objects.create_user(
         username=username, email=f'{username}@bcbstageflow.test',
         password='motdepasse123', role=User.Role.DIRECTEUR,
         first_name='Didier', last_name='Écteur', **kwargs,
     )
-    profil = ProfilDirecteur.objects.create(user=user)
+    profil = user.profil_directeur
     if departement is not None:
         departement.directeur = profil
         departement.save(update_fields=['directeur'])
@@ -87,13 +91,13 @@ def creer_directeur(username='directeur1', departement=None, **kwargs):
 
 
 def creer_tuteur(username='tuteur1', **kwargs):
-    from appStage.models import ProfilMaitreStage, User
+    from appStage.models import User
     user = User.objects.create_user(
         username=username, email=f'{username}@bcbstageflow.test',
         password='motdepasse123', role=User.Role.MAITRE_STAGE,
         first_name='Tania', last_name='Tuteur', **kwargs,
     )
-    return ProfilMaitreStage.objects.create(user=user)
+    return user.profil_maitre_stage
 
 
 def creer_stagiaire_direct(username='stagiaire1', **kwargs):
