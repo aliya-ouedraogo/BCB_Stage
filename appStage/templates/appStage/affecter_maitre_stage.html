@@ -4,6 +4,18 @@
 
 {% block dashboard_content %}
 
+  {% if stages_en_attente %}
+    <div class="alert-banner-stack">
+      <div class="alert-banner alert-banner--warning">
+        <span class="alert-banner-dot"></span>
+        <span>
+          <strong>{{ stages_en_attente|length }} stagiaire{{ stages_en_attente|length|pluralize }}</strong>
+          de votre service {{ stages_en_attente|length|pluralize:"a,ont" }} besoin d'un maître de stage.
+        </span>
+      </div>
+    </div>
+  {% endif %}
+
   <div class="panel" style="margin-bottom:20px;">
     <div class="panel-title-row">
       <span class="panel-title">Stagiaires en attente d'un maître de stage ({{ stages_en_attente|length }})</span>
@@ -21,6 +33,11 @@
           <span class="person-name">{{ stage.stagiaire.user.get_full_name }}</span>
           <span class="person-role">{{ stage.intitule_poste }}</span>
         </div>
+        {% if stage.statut == 'A_VENIR' %}
+          <span class="badge badge-info" style="flex-shrink:0;">Démarre le {{ stage.date_debut|date:"d/m/Y" }}</span>
+        {% else %}
+          <span class="badge badge-success" style="flex-shrink:0;">En cours</span>
+        {% endif %}
         <select name="tuteur" class="form-select" required style="max-width:260px;">
           <option value="">Choisir un maître de stage…</option>
           {% for tuteur in tuteurs %}

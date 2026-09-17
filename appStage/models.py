@@ -1,14 +1,53 @@
+import datetime
+import logging
+import threading
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
-import datetime
+
+logger = logging.getLogger(__name__)
 
 validateur_telephone_bf = RegexValidator(
     regex=r'^\+226[0-9]{8}$',
     message="Le numéro doit être au format +226 suivi de 8 chiffres.",
 )
+
+
+def envoyer_email_arriere_plan(subject, message, recipient_list):
+    """
+    Envoie un email sans bloquer la requête en cours ni faire échouer l'action
+    métier qui l'a déclenché (acceptation, refus, activation de compte...).
+
+    L'envoi part dans un thread à part ; en cas d'erreur (serveur SMTP
+    indisponible, DNS injoignable, etc.), l'erreur est journalisée côté
+    serveur au lieu de remonter et de faire planter l'action qui a déclenché
+    l'email. Avant ce changement, un simple souci SMTP faisait par exemple
+    échouer entièrement le refus d'une candidature en base, alors que le
+    refus en lui-même n'avait rien à voir avec l'email.
+    """
+    if not recipient_list:
+        return
+
+    from django.core.mail import send_mail
+
+    def _tache():
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception:
+            logger.exception(
+                "Échec d'envoi d'email (sujet : %s, destinataires : %s)", subject, recipient_list,
+            )
+
+    threading.Thread(target=_tache, daemon=True).start()
 
 
 class AnneeEtude(models.TextChoices):
@@ -152,7 +191,6 @@ class ProfilMaitreStage(models.Model):
             profil.save()
 
             from django.contrib.auth.tokens import default_token_generator
-            from django.core.mail import send_mail
             from django.conf import settings as dj_settings
             from django.urls import reverse
             from django.utils.encoding import force_bytes
@@ -163,7 +201,7 @@ class ProfilMaitreStage(models.Model):
             lien_relatif = reverse('appStage:activer_compte', kwargs={'uidb64': uidb64, 'token': token})
             lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
 
-            send_mail(
+            envoyer_email_arriere_plan(
                 subject="Votre compte tuteur - BCBStageFlow",
                 message=(
                     f"Bonjour {nom_complet},\n\n"
@@ -172,9 +210,7 @@ class ProfilMaitreStage(models.Model):
                     f"(valable 48 heures) :\n{lien_complet}\n\n"
                     f"L'équipe BCBStageFlow"
                 ),
-                from_email=dj_settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
-                fail_silently=False,
             )
 
         return profil
@@ -238,7 +274,6 @@ class ProfilDirecteur(models.Model):
             departement.save(update_fields=['directeur'])
 
             from django.contrib.auth.tokens import default_token_generator
-            from django.core.mail import send_mail
             from django.conf import settings as dj_settings
             from django.urls import reverse
             from django.utils.encoding import force_bytes
@@ -249,7 +284,7 @@ class ProfilDirecteur(models.Model):
             lien_relatif = reverse('appStage:activer_compte', kwargs={'uidb64': uidb64, 'token': token})
             lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
 
-            send_mail(
+            envoyer_email_arriere_plan(
                 subject="Votre compte directeur - BCBStageFlow",
                 message=(
                     f"Bonjour {nom_complet},\n\n"
@@ -259,9 +294,7 @@ class ProfilDirecteur(models.Model):
                     f"(valable 48 heures) :\n{lien_complet}\n\n"
                     f"L'équipe BCBStageFlow"
                 ),
-                from_email=dj_settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
-                fail_silently=False,
             )
 
         return profil
@@ -428,11 +461,8 @@ class Candidature(models.Model):
         return user, stage, lien_activation
 
     def _envoyer_email_entretien(self):
-        from django.core.mail import send_mail
-        from django.conf import settings as dj_settings
-
         date_affichee = self.date_entretien.strftime('%d/%m/%Y') if self.date_entretien else 'à confirmer'
-        send_mail(
+        envoyer_email_arriere_plan(
             subject="Votre candidature a retenu notre attention - BCBStageFlow",
             message=(
                 f"Bonjour {self.nom_complet},\n\n"
@@ -443,14 +473,11 @@ class Candidature(models.Model):
                 f"communiquée à l'issue de l'entretien, avec les instructions pour activer votre compte.\n\n"
                 f"L'équipe BCBStageFlow"
             ),
-            from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.email],
-            fail_silently=False,
         )
 
     def _envoyer_email_activation(self, user, date_debut):
         from django.contrib.auth.tokens import default_token_generator
-        from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
         from django.utils.encoding import force_bytes
@@ -462,7 +489,7 @@ class Candidature(models.Model):
         lien_complet = f"{dj_settings.SITE_URL}{lien_relatif}"
         date_debut_affichee = date_debut.strftime('%d/%m/%Y')
 
-        send_mail(
+        envoyer_email_arriere_plan(
             subject="Votre stage est confirmé - BCBStageFlow",
             message=(
                 f"Bonjour {self.nom_complet},\n\n"
@@ -472,17 +499,12 @@ class Candidature(models.Model):
                 f"en suivant ce lien (valable 48 heures) :\n{lien_complet}\n\n"
                 f"L'équipe BCBStageFlow"
             ),
-            from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.email],
-            fail_silently=False,
         )
         return lien_complet
 
     def _envoyer_email_refus(self):
-        from django.core.mail import send_mail
-        from django.conf import settings as dj_settings
-
-        send_mail(
+        envoyer_email_arriere_plan(
             subject="Réponse à votre candidature - BCBStageFlow",
             message=(
                 f"Bonjour {self.nom_complet},\n\n"
@@ -492,19 +514,16 @@ class Candidature(models.Model):
                 f"Nous vous souhaitons plein succès dans vos démarches.\n\n"
                 f"L'équipe BCBStageFlow"
             ),
-            from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.email],
-            fail_silently=False,
         )
 
     def notifier_rh(self):
         """
         Prévient toute l'équipe RH par email dès qu'une nouvelle candidature
         arrive, pour qu'elle n'ait pas à surveiller la page en continu.
-        N'empêche jamais la soumission de la candidature si l'envoi échoue
-        (fail_silently) : le RH la verra de toute façon sur son dashboard.
+        N'empêche jamais la soumission de la candidature si l'envoi échoue :
+        le RH la verra de toute façon sur son dashboard.
         """
-        from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
 
@@ -516,7 +535,7 @@ class Candidature(models.Model):
             return
 
         lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:candidatures')}"
-        send_mail(
+        envoyer_email_arriere_plan(
             subject="Nouvelle candidature reçue - BCBStageFlow",
             message=(
                 f"Une nouvelle candidature vient d'être déposée.\n\n"
@@ -526,9 +545,7 @@ class Candidature(models.Model):
                 f"Téléphone : {self.telephone or 'non renseigné'}\n\n"
                 f"Pour la consulter et y répondre :\n{lien_complet}"
             ),
-            from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=emails_rh,
-            fail_silently=True,
         )
 
     def _generer_username(self):
@@ -671,9 +688,8 @@ class Stage(models.Model):
         le directeur du département auquel il vient d'être affecté par le
         RH, le stagiaire pour information, le directeur pour qu'il choisisse
         à son tour un maître de stage. N'empêche jamais l'affectation
-        elle-même si l'un des envois échoue (fail_silently).
+        elle-même si l'un des envois échoue.
         """
-        from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
 
@@ -683,7 +699,7 @@ class Stage(models.Model):
                 destinataire=stagiaire_user,
                 message=f"Vous avez été affecté(e) au service {self.departement.nom}.",
             )
-            send_mail(
+            envoyer_email_arriere_plan(
                 subject="Affectation à un service - BCBStageFlow",
                 message=(
                     f"Bonjour {stagiaire_user.get_full_name()},\n\n"
@@ -692,9 +708,7 @@ class Stage(models.Model):
                     f"Un maître de stage vous sera bientôt attribué.\n\n"
                     f"L'équipe BCBStageFlow"
                 ),
-                from_email=dj_settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[stagiaire_user.email],
-                fail_silently=True,
             )
 
         directeur = getattr(self.departement, 'directeur', None)
@@ -709,18 +723,27 @@ class Stage(models.Model):
         )
 
         lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:affecter_maitre_stage')}"
-        send_mail(
+        date_debut_affichee = self.date_debut.strftime('%d/%m/%Y')
+        if self.statut == self.Statut.A_VENIR:
+            phrase_periode = (
+                f"pour le poste de {self.intitule_poste}, à partir du {date_debut_affichee}. "
+                f"Vous pouvez dès à présent lui choisir un maître de stage, qui prendra ses fonctions "
+                f"le jour du démarrage du stage :"
+            )
+        else:
+            phrase_periode = (
+                f"pour le poste de {self.intitule_poste}, stage en cours depuis le {date_debut_affichee}. "
+                f"Merci de lui choisir un maître de stage :"
+            )
+        envoyer_email_arriere_plan(
             subject="Nouveau stagiaire affecté à votre service - BCBStageFlow",
             message=(
                 f"Bonjour {directeur.user.get_full_name()},\n\n"
                 f"{self.stagiaire.user.get_full_name()} vient d'être affecté(e) à votre service "
-                f"({self.departement.nom}) pour le poste de {self.intitule_poste}.\n\n"
-                f"Merci de lui choisir un maître de stage :\n{lien_complet}\n\n"
+                f"({self.departement.nom}) {phrase_periode}\n{lien_complet}\n\n"
                 f"L'équipe BCBStageFlow"
             ),
-            from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[directeur.user.email],
-            fail_silently=True,
         )
 
     @classmethod
@@ -783,7 +806,6 @@ class DemandeEncadrement(models.Model):
 
     def notifier_tuteur(self):
         """Email + notification in-app envoyés au tuteur pressenti, dès la création de la demande."""
-        from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
 
@@ -794,7 +816,7 @@ class DemandeEncadrement(models.Model):
             lien=reverse('appStage:mes_affectations'),
         )
         lien_complet = f"{dj_settings.SITE_URL}{reverse('appStage:mes_affectations')}"
-        send_mail(
+        envoyer_email_arriere_plan(
             subject="Proposition d'encadrement - BCBStageFlow",
             message=(
                 f"Bonjour {tuteur_user.get_full_name()},\n\n"
@@ -803,9 +825,7 @@ class DemandeEncadrement(models.Model):
                 f"Pour accepter ou refuser :\n{lien_complet}\n\n"
                 f"L'équipe BCBStageFlow"
             ),
-            from_email=dj_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[tuteur_user.email],
-            fail_silently=True,
         )
 
     def accepter(self):
@@ -831,8 +851,6 @@ class DemandeEncadrement(models.Model):
         tuteur en particulier a décliné, et attend simplement une nouvelle
         proposition.
         """
-        from django.core.mail import send_mail
-        from django.conf import settings as dj_settings
         from django.urls import reverse
 
         tuteur_nom = self.maitre_de_stage_demande.user.get_full_name()
@@ -845,12 +863,10 @@ class DemandeEncadrement(models.Model):
 
             Notification.creer(destinataire=stagiaire_user, message=message_stagiaire)
             if stagiaire_user.email:
-                send_mail(
+                envoyer_email_arriere_plan(
                     subject="Votre encadrement de stage - BCBStageFlow",
                     message=f"Bonjour {stagiaire_user.get_full_name()},\n\n{message_stagiaire}\n\nL'équipe BCBStageFlow",
-                    from_email=dj_settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[stagiaire_user.email],
-                    fail_silently=True,
                 )
         else:
             message_directeur = (
@@ -873,12 +889,10 @@ class DemandeEncadrement(models.Model):
                     f"Motif indiqué :\n{self.motif_refus}\n\n"
                     f"Merci de lui choisir un autre maître de stage."
                 )
-            send_mail(
+            envoyer_email_arriere_plan(
                 subject="Réponse à une proposition d'encadrement - BCBStageFlow",
                 message=f"{corps_email}\n\nL'équipe BCBStageFlow",
-                from_email=dj_settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[directeur.user.email],
-                fail_silently=True,
             )
 
 
@@ -957,7 +971,6 @@ class Mission(models.Model):
 
     def notifier_stagiaire(self):
         """Email + notification in-app au stagiaire dès qu'une mission lui est assignée."""
-        from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
 
@@ -969,7 +982,7 @@ class Mission(models.Model):
             lien=lien_relatif,
         )
         if stagiaire_user.email:
-            send_mail(
+            envoyer_email_arriere_plan(
                 subject="Nouvelle mission assignée - BCBStageFlow",
                 message=(
                     f"Bonjour {stagiaire_user.get_full_name()},\n\n"
@@ -978,9 +991,7 @@ class Mission(models.Model):
                     f"Consultez-la ici :\n{dj_settings.SITE_URL}{lien_relatif}\n\n"
                     f"L'équipe BCBStageFlow"
                 ),
-                from_email=dj_settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[stagiaire_user.email],
-                fail_silently=True,
             )
 
 
@@ -1091,9 +1102,8 @@ class DocumentStage(models.Model):
         Prévient par email (et via une Notification in-app) le directeur du
         service et, s'il est déjà assigné, le maître de stage, dès qu'un
         stagiaire dépose un document (ex. rapport de stage). N'empêche
-        jamais le dépôt si l'envoi échoue (fail_silently).
+        jamais le dépôt si l'envoi échoue.
         """
-        from django.core.mail import send_mail
         from django.conf import settings as dj_settings
         from django.urls import reverse
 
@@ -1116,7 +1126,7 @@ class DocumentStage(models.Model):
                 lien=lien_relatif,
             )
             if destinataire_user.email:
-                send_mail(
+                envoyer_email_arriere_plan(
                     subject="Nouveau document déposé - BCBStageFlow",
                     message=(
                         f"Bonjour {destinataire_user.get_full_name()},\n\n"
@@ -1124,17 +1134,16 @@ class DocumentStage(models.Model):
                         f"Pour le consulter :\n{lien_complet}\n\n"
                         f"L'équipe BCBStageFlow"
                     ),
-                    from_email=dj_settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[destinataire_user.email],
-                    fail_silently=True,
                 )
 
 
 class Notification(models.Model):
     """
-    Notification in-app minimale, affichée dans la cloche du tableau de
-    bord. Vient en complément des emails (canal principal) envoyés par les
-    méthodes métier ci-dessus, jamais en remplacement.
+    Notification in-app minimale, rattachée à un destinataire et à un lien
+    optionnel. Vient en complément des emails (canal principal) envoyés par
+    les méthodes métier ci-dessus, jamais en remplacement — il n'existe pas
+    (pour l'instant) d'affichage dédié dans l'interface.
     """
 
     destinataire = models.ForeignKey(

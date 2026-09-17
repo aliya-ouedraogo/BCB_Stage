@@ -46,6 +46,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -156,6 +157,26 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# WhiteNoise sert les fichiers statiques directement depuis Django (via le
+# middleware ajouté plus haut, juste après SecurityMiddleware), sans avoir
+# besoin d'un serveur web séparé (nginx, etc.) juste pour ça. En production
+# (DEBUG=False), les fichiers sont servis compressés et avec un nom versionné
+# (hash dans le nom de fichier) pour un cache navigateur fiable. Sur le
+# serveur de la banque, il restera à lancer `python manage.py collectstatic`
+# après chaque déploiement pour régénérer staticfiles/.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if not DEBUG
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
+    },
+}
 
 
 # Email Configuration

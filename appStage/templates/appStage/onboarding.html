@@ -28,6 +28,14 @@
 
     <!-- Panneau droit : formulaire d'accès -->
     <section class="auth-form-panel">
+      <!-- Sur mobile, le panneau de marque à gauche (.auth-showcase) est masqué :
+           on rappelle ici le logo et le nom de la plateforme, sinon la page perd
+           tout repère de marque sur petit écran. Invisible sur desktop. -->
+      <div class="auth-mobile-brand">
+        <span class="auth-mobile-brand-mark"><img src="{% static 'appStage/img/logo-bcb.png' %}" alt="BCB" class="brand-logo-img"></span>
+        <span>Portail de gestion des stages de la BCB</span>
+      </div>
+
       <h1>Commencer</h1>
       <p class="auth-subtitle">Connectez-vous à votre compte ou créez-en un nouveau pour accéder au portail de gestion.</p>
 
@@ -42,11 +50,6 @@
           <span class="link-spinner htmx-indicator"></span>
         </a>
       </div>
-
-      <p class="auth-footer">
-        En continuant, vous acceptez nos <a href="#">Conditions d'utilisation</a> et notre
-        <a href="#">Politique de confidentialité</a>.
-      </p>
     </section>
 
   </div>

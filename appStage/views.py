@@ -1246,9 +1246,15 @@ def dashboard_directeur(request):
     stages_service = Stage.objects.filter(departement=departement, statut=Stage.Statut.EN_COURS) \
         .select_related('stagiaire__user', 'maitre_de_stage__user')
 
-    stages_sans_tuteur = stages_service.filter(maitre_de_stage__isnull=True).exclude(
-        demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE
-    )
+    # Un stage "à venir" peut déjà se voir proposer un maître de stage à
+    # l'avance (voir affecter_maitre_stage), donc le compte "à traiter" et
+    # le bandeau d'alerte couvrent aussi bien les stages en cours que ceux
+    # qui démarrent bientôt, pas seulement les stages déjà actifs.
+    stages_sans_tuteur = Stage.objects.filter(
+        departement=departement,
+        statut__in=[Stage.Statut.A_VENIR, Stage.Statut.EN_COURS],
+        maitre_de_stage__isnull=True,
+    ).exclude(demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE)
     demandes_en_attente = DemandeEncadrement.objects.filter(
         stage__departement=departement, statut=DemandeEncadrement.Statut.EN_ATTENTE,
     ).select_related('stage__stagiaire__user', 'maitre_de_stage_demande__user')
@@ -1258,8 +1264,11 @@ def dashboard_directeur(request):
     ).select_related('stage__stagiaire__user').order_by('-date_ajout')[:5]
 
     nb_encadres = stages_service.filter(maitre_de_stage__isnull=False).count()
+    nb_service_sans_tuteur = stages_service.filter(maitre_de_stage__isnull=True).exclude(
+        demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE
+    ).count()
     stats_encadrement = _repartition_donut(
-        [('Avec maître de stage', nb_encadres), ('Sans maître de stage', stages_sans_tuteur.count())],
+        [('Avec maître de stage', nb_encadres), ('Sans maître de stage', nb_service_sans_tuteur)],
         palette=['#16a34a', '#f59e0b'],
     )
 
@@ -1288,8 +1297,12 @@ def affecter_maitre_stage(request):
         messages.error(request, "Vous n'êtes rattaché(e) à aucun département pour le moment.")
         return redirect('appStage:dashboard_directeur')
 
+    # Un stage "à venir" est inclus, pas seulement "en cours" : le directeur
+    # peut ainsi déjà préparer l'arrivée d'un stagiaire en lui choisissant un
+    # maître de stage avant même la date de début (voir aussi le mail envoyé
+    # par le RH lors de l'affectation au service, qui pointe vers cette page).
     stages_en_attente = Stage.objects.filter(
-        departement=departement, statut=Stage.Statut.EN_COURS, maitre_de_stage__isnull=True,
+        departement=departement, statut__in=[Stage.Statut.A_VENIR, Stage.Statut.EN_COURS], maitre_de_stage__isnull=True,
     ).exclude(
         demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE
     ).select_related('stagiaire__user')

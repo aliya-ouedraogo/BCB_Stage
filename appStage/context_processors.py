@@ -25,7 +25,7 @@ def nav_items(request):
         ],
         'DIRECTEUR': [
             {'label': 'Tableau de bord', 'icon': 'layout-dashboard', 'url_name': 'appStage:dashboard_directeur'},
-            {'label': 'Encadrement', 'icon': 'user-check', 'url_name': 'appStage:affecter_maitre_stage'},
+            {'label': 'Encadrement', 'icon': 'user-check', 'url_name': 'appStage:affecter_maitre_stage', 'badge': _nb_stagiaires_sans_tuteur(request.user)},
             {'label': 'Documents', 'icon': 'inbox', 'url_name': 'appStage:documents_recus_directeur'},
             {'label': 'Paramètres', 'icon': 'settings', 'url_name': 'appStage:parametres'},
         ],
@@ -75,3 +75,23 @@ def _nb_affectations_en_attente(user):
     return DemandeEncadrement.objects.filter(
         maitre_de_stage_demande=profil, statut=DemandeEncadrement.Statut.EN_ATTENTE,
     ).count()
+
+
+def _nb_stagiaires_sans_tuteur(user):
+    """
+    Nombre de stagiaires du service de ce directeur qui n'ont ni maître de
+    stage ni proposition en cours, pour le badge Encadrement. Mêmes
+    critères que le bandeau d'alerte de la page (une proposition déjà
+    envoyée, même sans réponse, ne compte plus comme "à traiter" pour le
+    directeur : la balle est dans le camp du tuteur sollicité).
+    """
+    from .models import DemandeEncadrement, Stage
+    profil = getattr(user, 'profil_directeur', None)
+    departement = getattr(profil, 'departement', None) if profil else None
+    if departement is None:
+        return 0
+    return Stage.objects.filter(
+        departement=departement,
+        statut__in=[Stage.Statut.A_VENIR, Stage.Statut.EN_COURS],
+        maitre_de_stage__isnull=True,
+    ).exclude(demandes_encadrement__statut=DemandeEncadrement.Statut.EN_ATTENTE).count()
